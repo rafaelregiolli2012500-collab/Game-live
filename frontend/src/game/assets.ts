@@ -11,10 +11,13 @@ export const CHARACTERS: Record<CharacterId, { name: string; tagline: string; ac
 
 export const POSES: Pose[] = ["idle", "walk", "crouch", "jump", "punch", "hook", "uppercut", "kick", "airkick", "sweep", "grab", "block", "hurt", "stun", "knockdown", "victory"];
 
-/** Rendered height (canvas px) per pose — keeps both fighters at the same body scale across sprites. */
-export const POSE_HEIGHT: Record<Pose, number> = {
-  idle: 250, walk: 248, crouch: 188, jump: 196, punch: 250, hook: 250, uppercut: 286, kick: 244, airkick: 222,
-  sweep: 168, grab: 246, block: 244, hurt: 236, stun: 250, knockdown: 96, victory: 252,
+/**
+ * Rendered height (canvas px) per character + pose, tuned so the head/body scale is identical in
+ * every movement (crouch, sweep, jump, knockdown…) — only the silhouette changes, never the size.
+ */
+export const POSE_HEIGHT: Record<CharacterId, Record<Pose, number>> = {
+  lula: { idle: 250, walk: 250, crouch: 222, jump: 228, punch: 250, hook: 252, uppercut: 286, kick: 248, airkick: 240, sweep: 226, grab: 250, block: 250, hurt: 245, stun: 250, knockdown: 88, victory: 258 },
+  flavio: { idle: 250, walk: 256, crouch: 222, jump: 228, punch: 250, hook: 252, uppercut: 268, kick: 250, airkick: 240, sweep: 225, grab: 252, block: 256, hurt: 250, stun: 252, knockdown: 86, victory: 254 },
 };
 
 /**

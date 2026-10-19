@@ -21,8 +21,8 @@ const ready = (img?: HTMLImageElement) => Boolean(img && img.complete && img.nat
 function drawSprite(ctx: CanvasRenderingContext2D, images: Images, id: Fighter["id"], pose: Pose, x: number, y: number, facing: number, rot: number, squash: number, alpha = 1) {
   const img = images[spritePath(id, pose)];
   if (!ready(img)) return;
-  const h = POSE_HEIGHT[pose] * squash;
-  const w = (img.naturalWidth / img.naturalHeight) * POSE_HEIGHT[pose];
+  const h = POSE_HEIGHT[id][pose] * squash;
+  const w = (img.naturalWidth / img.naturalHeight) * POSE_HEIGHT[id][pose];
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(Math.round(x), Math.round(y));
