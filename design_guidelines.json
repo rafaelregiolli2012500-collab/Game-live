@@ -1,0 +1,126 @@
+{
+  "project_name": "Retro Arcade Game Blueprint",
+  "theme": "Vibrant Electric Cyber-Arcade (Dark Mode Core)",
+  "emotional_archetype": "Electric & Neon - Tactical Arcade Immersion",
+  "design_philosophy": {
+    "vision": "Transform the skeleton into an energetic, polished, responsive, end-to-end local arcade game with zero mandatory login, immediate playable gratification, persistence, local rankings, combo mechanics, and tactile feedback.",
+    "core_principles": [
+      "Immediate Playability: Zero friction, instant start screen into action with single tap/key press.",
+      "Vibrant Arcade Aesthetics: High-contrast dark void background with glowing neon cyan, hot magenta, electric yellow, and CRT scanline CRT overlays.",
+      "Juicy Feedback & Polish: Screen shake, particle explosions, dynamic combo multipliers, floating point indicators, audio visualizers, and state transitions.",
+      "Persistence & Progression: Browser localStorage sync + backend leaderboard persistence, unlocking skins, tracking personal high scores, and achievement badges."
+    ]
+  },
+  "typography": {
+    "heading_font": "Space Grotesk, sans-serif or Orbitron, display-sans",
+    "body_font": "Geist Variable, sans-serif",
+    "mono_font": "Geist Mono Variable, monospace",
+    "hierarchy": {
+      "h1_title": "text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight drop-shadow-[0_0_15px_rgba(255,0,110,0.6)]",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-cyan-400 drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]",
+      "h3_card": "text-xl sm:text-2xl font-semibold tracking-normal text-white",
+      "body": "text-base font-medium leading-relaxed text-slate-300",
+      "hud_stats": "font-mono text-lg sm:text-2xl font-bold text-yellow-400 tracking-wider",
+      "labels": "text-xs uppercase tracking-[0.2em] text-slate-400 font-bold"
+    }
+  },
+  "colors": {
+    "mode": "dark",
+    "base": {
+      "void_background": "#090A10",
+      "card_surface": "#121420",
+      "card_surface_hover": "#1A1D2E",
+      "overlay_backdrop": "rgba(9, 10, 16, 0.85)",
+      "border_default": "rgba(255, 255, 255, 0.12)"
+    },
+    "accents": {
+      "neon_pink": "#FF006E",
+      "neon_cyan": "#00F0FF",
+      "neon_yellow": "#FFE600",
+      "neon_green": "#39FF14",
+      "neon_purple": "#B5179E",
+      "arcade_red": "#FF3B30"
+    },
+    "gradients": {
+      "primary_btn": "bg-gradient-to-r from-[#FF006E] to-[#B5179E] hover:from-[#FF2A85] hover:to-[#D81BAB]",
+      "cyan_btn": "bg-gradient-to-r from-[#00F0FF] to-[#00A8FF] text-black font-extrabold hover:brightness-110",
+      "gold_badge": "bg-gradient-to-r from-[#FFE600] to-[#FF9900] text-black",
+      "card_border": "border-t border-l border-white/20 border-b-2 border-r-2 border-black/80"
+    }
+  },
+  "visual_enhancers": {
+    "scanlines": "Absolute inset overlay with repeating linear gradient creating nostalgic CRT screen raster lines",
+    "neon_glows": "shadow-[0_0_20px_rgba(0,240,255,0.35)] or drop-shadow-[0_0_12px_rgba(255,0,110,0.5)]",
+    "arcade_frame": "Heavy double border with rounded-2xl, inner shadow, and retro score header display",
+    "glassmorphism": "backdrop-blur-xl bg-black/60 border border-white/10"
+  },
+  "layout_strategies": {
+    "header_nav": "Fixed top bar z-50 backdrop-blur-md bg-[#090A10]/90 border-b border-white/10 text-white px-4 py-3 flex items-center justify-between",
+    "main_container": "max-w-7xl mx-auto px-4 py-6 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]",
+    "arcade_cabinet_wrapper": "relative w-full max-w-4xl bg-[#121420] rounded-3xl p-4 sm:p-8 border-4 border-[#00F0FF]/30 shadow-[0_0_50px_rgba(0,240,255,0.15)] overflow-hidden",
+    "game_canvas_area": "relative w-full aspect-video sm:aspect-[16/9] min-h-[380px] max-h-[620px] bg-[#05060A] rounded-2xl overflow-hidden border-2 border-cyan-500/30 flex items-center justify-center"
+  },
+  "component_structure": {
+    "navigation": "HeaderNav with Volume Toggle, Theme Skin Selector, High Score Badge, Local Leaderboard Modal Trigger, Reset Progress Trigger",
+    "screens": [
+      "AttractScreen / Start Screen (Title, High Score, Select Difficulty, Select Skin, Press Start / Tap to Play CTA)",
+      "GameplayScreen (HUD canvas/grid, Combo counter, Score multiplier, Power-ups, Lives/Timer, Virtual Touch D-Pad / Controls for Mobile)",
+      "PauseOverlay (Resume, Restart, Audio toggles, Keybindings guide)",
+      "GameOverScreen (Final Score, New Record indicator, Combo breakdown, Restart Button, Save Name to Local Leaderboard)",
+      "VictoryScreen (Clear Time, Accuracy bonus, Celebratory confetti particle explosion, Next Level/Infinite Mode)"
+    ],
+    "widgets": [
+      "LocalLeaderboardModal (Tabs: All-time, Today, Difficulty levels, Clear Scores button)",
+      "AchievementsDrawer (Unlocked badges, combo streaks, games played)",
+      "AudioVisualizer (Toggle SFX / Arcade synth BGM simulation with volume slider)",
+      "ControlsGuide (Keyboard arrows/WASD/Space + Mobile Touch Joystick diagram)"
+    ]
+  },
+  "image_urls": {
+    "arcade_background": "https://images.unsplash.com/photo-1757444838044-d9dcb1bb3017?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHw0fHxhcmNhZGUlMjByZXRybyUyMG5lb24lMjBuZW9uJTIwZ2FtZSUyMG5lb24lMjBsaWdodHMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc5MjM3MTM4MHww&ixlib=rb-4.1.0&q=85",
+    "arcade_machines_lit": "https://images.unsplash.com/photo-1558324190-c940eb141401?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwyfHxhcmNhZGUlMjByZXRybyUyMG5lb24lMjBuZW9uJTIwZ2FtZSUyMG5lb24lMjBsaWdodHMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc5MjM3MTM4MHww&ixlib=rb-4.1.0&q=85",
+    "ski_ball_arcade": "https://images.pexels.com/photos/1293260/pexels-photo-1293260.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "data_testid_guidelines": {
+    "mandatory_elements": [
+      "data-testid=\"start-game-button\"",
+      "data-testid=\"restart-game-button\"",
+      "data-testid=\"pause-game-button\"",
+      "data-testid=\"resume-game-button\"",
+      "data-testid=\"current-score-display\"",
+      "data-testid=\"high-score-display\"",
+      "data-testid=\"combo-counter-display\"",
+      "data-testid=\"lives-counter-display\"",
+      "data-testid=\"leaderboard-modal-open-button\"",
+      "data-testid=\"leaderboard-entry-input\"",
+      "data-testid=\"save-score-button\"",
+      "data-testid=\"sound-toggle-button\"",
+      "data-testid=\"difficulty-select\"",
+      "data-testid=\"skin-select\"",
+      "data-testid=\"game-over-modal\"",
+      "data-testid=\"victory-modal\"",
+      "data-testid=\"mobile-dpad-up\"",
+      "data-testid=\"mobile-dpad-down\"",
+      "data-testid=\"mobile-dpad-left\"",
+      "data-testid=\"mobile-dpad-right\"",
+      "data-testid=\"mobile-action-button\""
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Build a complete, standalone, end-to-end playable arcade game inside src/pages/Home.tsx (or subcomponents in src/components/game/).",
+    "Preserve zero-login local functionality using localStorage for high scores, game history, unlocked themes, and stats, with smooth REST API synchronization to backend/server.py (/api/scores, /api/leaderboard, /api/status).",
+    "Include responsive desktop keyboard controls (WASD/Arrows + Space) and mobile-friendly touch d-pad/action buttons so it is 100% playable on all devices.",
+    "Add audio effects using Web Audio API synthesis (synth beeps, coin sounds, explosion sounds) with mute/volume controls so no external audio files are required.",
+    "Provide crisp victory, game over, pause overlays, level difficulty controls, skin customization, local leaderboard, and combo multipliers.",
+    "Ensure every single interactive element has explicit data-testid attributes matching data_testid_guidelines."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": {
+    "anti_patterns": [
+      "Do NOT leave placeholder text or incomplete screens.",
+      "Do NOT require external user authentication to start or save high scores.",
+      "Do NOT use transparent dropdown backgrounds without heavy backdrop blurs.",
+      "Do NOT default to standard centered white layout; maintain the high-contrast neon arcade vibe."
+    ],
+    "testing_compliance": "Ensure all buttons, inputs, modals, and score text fields feature stable data-testid attributes for automated testing."
+  }
+}
