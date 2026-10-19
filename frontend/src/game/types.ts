@@ -5,9 +5,10 @@ export type { CharacterId };
 export type Pose =
   | "idle" | "walk" | "crouch" | "jump"
   | "punch" | "hook" | "uppercut" | "kick" | "airkick" | "sweep" | "grab"
+  | "charge" | "fireball"
   | "block" | "hurt" | "stun" | "knockdown" | "victory";
-/** Normal moves from the reference movement sheet (no special moves). */
-export type BasicMove = "jab" | "hook" | "uppercut" | "kick" | "sweep" | "airkick" | "grab";
+/** Moves from the reference movement sheet; "hadouken" is the gift-only special (never chosen by the AI). */
+export type BasicMove = "jab" | "hook" | "uppercut" | "kick" | "sweep" | "airkick" | "grab" | "hadouken";
 export type FighterState = "idle" | "walk" | "attack" | "block" | "dodge" | "hit" | "stun" | "grabbed" | "knockdown" | "victory";
 
 export interface AiMemory {
@@ -50,6 +51,8 @@ export interface Fighter {
   stunImmune: number;
   invuln: number;
   grabPartner: Fighter | null;
+  /** Gift special in progress: damage carried by the energy ball once released. */
+  special: { damage: number; username: string } | null;
   ai: AiMemory;
 }
 
@@ -64,6 +67,7 @@ export interface CombatStats {
   sweep: number;
   airkick: number;
   grab: number;
+  hadouken: number;
   throws: number;
   combos: number;
   stuns: number;
@@ -84,6 +88,8 @@ export interface HudSnapshot {
   timeLeft: number;
   round: number;
   stats: CombatStats;
+  /** Gift specials waiting + in flight. */
+  specials: number;
   states: Record<CharacterId, FighterState>;
 }
 

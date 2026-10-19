@@ -8,6 +8,8 @@ Character = Literal["lula", "flavio"]
 IntegrationMode = Literal["demo", "live"]
 CombatMode = Literal["live", "normal"]
 TargetCharacter = Literal["opponent", "lula", "flavio"]
+# Special moves a gift can trigger (from the reference movement sheet).
+SpecialMove = Literal["none", "hadouken"]
 
 
 class GiftRule(BaseModel):
@@ -21,6 +23,7 @@ class GiftRule(BaseModel):
     target_character: TargetCharacter = "opponent"
     enabled: bool = True
     repeat_policy: Literal["individual", "group"] = "individual"
+    special_move: SpecialMove = "none"
 
 
 class CombatSettings(BaseModel):
@@ -51,8 +54,8 @@ class LiveConfig(BaseModel):
     id: str = "default"
     integration_mode: IntegrationMode = "demo"
     rules: list[GiftRule] = Field(default_factory=list)
-    # Bumped when the gift catalogue is reset; v2 = every previous gift rule removed.
-    rules_version: int = 2
+    # Bumped when the gift catalogue changes; v2 = old gifts removed, v3 = Rosa → Hadouken.
+    rules_version: int = 3
     combat: CombatSettings = Field(default_factory=CombatSettings)
 
 
@@ -83,6 +86,7 @@ class GiftEvent(BaseModel):
     animation_ms: int = Field(ge=100)
     effect_intensity: float = Field(ge=0.1)
     repeat_policy: Literal["individual", "group"] = "individual"
+    special_move: SpecialMove = "none"
     reference_value: int = Field(default=0, ge=0)
     source: Literal["demo", "provider"] = "demo"
     status: Literal["queued", "processing", "completed"] = "queued"

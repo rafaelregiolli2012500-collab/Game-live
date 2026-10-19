@@ -7,6 +7,8 @@ export type IntegrationMode = "demo" | "live";
 export type CombatMode = "live" | "normal";
 export type TargetCharacter = "opponent" | CharacterId;
 export type RepeatPolicy = "individual" | "group";
+/** Special moves a gift can trigger (from the reference movement sheet). */
+export type SpecialMove = "none" | "hadouken";
 
 export interface GiftRule {
   gift_id: string;
@@ -19,6 +21,7 @@ export interface GiftRule {
   target_character: TargetCharacter;
   enabled: boolean;
   repeat_policy: RepeatPolicy;
+  special_move: SpecialMove;
 }
 
 export interface CombatSettings {
@@ -71,6 +74,7 @@ export interface GiftEvent {
   animation_ms: number;
   effect_intensity: number;
   repeat_policy: RepeatPolicy;
+  special_move: SpecialMove;
   reference_value: number;
   source: "demo" | "provider";
   status: "queued" | "processing" | "completed";
@@ -112,7 +116,7 @@ export const fetchLiveQueue = () => apiGet<GiftEvent[]>("/live/queue");
 export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   id: "default",
   integration_mode: "demo",
-  rules_version: 2,
+  rules_version: 3,
   combat: {
     max_hp: 600,
     common_damage: 5,
@@ -136,10 +140,12 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
     ai_skill: 0.65,
     queue_priority: "fifo",
   },
-  // Gift specials were removed; the new gifts are added in the next phase.
-  rules: [],
+  rules: [
+    { gift_id: "rose", gift_name: "Rosa", reference_value: 1, action_name: "Hadouken", damage: 30, animation_ms: 1800, effect_intensity: 1.2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "hadouken" },
+  ],
 };
 
-export const GIFT_ICONS: Record<string, string> = {};
+export const GIFT_ICONS: Record<string, string> = { rose: "🌹" };
+export const SPECIAL_MOVES: { id: SpecialMove; label: string }[] = [{ id: "none", label: "Nenhum" }, { id: "hadouken", label: "Hadouken" }];
 export const giftIcon = (giftId: string) => GIFT_ICONS[giftId] ?? "🎁";
 export const giftTier = (value: number) => (value >= 20000 ? 4 : value >= 1000 ? 3 : value >= 30 ? 2 : 1);

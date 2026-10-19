@@ -9,7 +9,7 @@ import type { BasicMove, Fighter } from "./types";
 const WALK_SPEED = 175;
 
 function react(f: Fighter, o: Fighter, ctx: CombatContext) {
-  if (!o.move) return;
+  if (!o.move || o.move === "hadouken") return;
   const def = MOVES[o.move];
   const timeToImpact = (def.impacts[0] - o.moveTime) / ctx.settings.animation_speed;
   const recovering = f.state === "attack" && f.move !== null && f.moveTime > MOVES[f.move].impacts[MOVES[f.move].impacts.length - 1] + 0.06;

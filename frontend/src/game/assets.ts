@@ -9,15 +9,15 @@ export const CHARACTERS: Record<CharacterId, { name: string; tagline: string; ac
   flavio: { name: "FLÁVIO", tagline: "O HERDEIRO", accent: "#39ff88" },
 };
 
-export const POSES: Pose[] = ["idle", "walk", "crouch", "jump", "punch", "hook", "uppercut", "kick", "airkick", "sweep", "grab", "block", "hurt", "stun", "knockdown", "victory"];
+export const POSES: Pose[] = ["idle", "walk", "crouch", "jump", "punch", "hook", "uppercut", "kick", "airkick", "sweep", "grab", "charge", "fireball", "block", "hurt", "stun", "knockdown", "victory"];
 
 /**
  * Rendered height (canvas px) per character + pose, tuned so the head/body scale is identical in
  * every movement (crouch, sweep, jump, knockdown…) — only the silhouette changes, never the size.
  */
 export const POSE_HEIGHT: Record<CharacterId, Record<Pose, number>> = {
-  lula: { idle: 250, walk: 250, crouch: 222, jump: 228, punch: 250, hook: 252, uppercut: 286, kick: 248, airkick: 240, sweep: 226, grab: 250, block: 250, hurt: 245, stun: 250, knockdown: 88, victory: 258 },
-  flavio: { idle: 250, walk: 256, crouch: 222, jump: 228, punch: 250, hook: 252, uppercut: 268, kick: 250, airkick: 240, sweep: 225, grab: 252, block: 256, hurt: 250, stun: 252, knockdown: 86, victory: 254 },
+  lula: { idle: 250, walk: 250, crouch: 222, jump: 228, punch: 250, hook: 252, uppercut: 286, kick: 248, airkick: 240, sweep: 226, grab: 250, charge: 238, fireball: 228, block: 250, hurt: 245, stun: 250, knockdown: 88, victory: 258 },
+  flavio: { idle: 250, walk: 256, crouch: 222, jump: 228, punch: 250, hook: 252, uppercut: 268, kick: 250, airkick: 240, sweep: 225, grab: 252, charge: 240, fireball: 240, block: 256, hurt: 250, stun: 252, knockdown: 86, victory: 254 },
 };
 
 /**
@@ -25,8 +25,14 @@ export const POSE_HEIGHT: Record<CharacterId, Record<Pose, number>> = {
  * Measured from head + feet of each PNG so switching poses never makes the body jump sideways.
  */
 export const POSE_ANCHOR: Record<CharacterId, Record<Pose, number>> = {
-  lula: { idle: 0.494, walk: 0.451, crouch: 0.525, jump: 0.477, punch: 0.398, hook: 0.393, uppercut: 0.572, kick: 0.348, airkick: 0.363, sweep: 0.35, grab: 0.445, block: 0.51, hurt: 0.573, stun: 0.546, knockdown: 0.5, victory: 0.446 },
-  flavio: { idle: 0.474, walk: 0.396, crouch: 0.512, jump: 0.53, punch: 0.383, hook: 0.384, uppercut: 0.501, kick: 0.31, airkick: 0.323, sweep: 0.397, grab: 0.434, block: 0.516, hurt: 0.435, stun: 0.535, knockdown: 0.5, victory: 0.445 },
+  lula: { idle: 0.494, walk: 0.451, crouch: 0.525, jump: 0.477, punch: 0.398, hook: 0.393, uppercut: 0.572, kick: 0.348, airkick: 0.363, sweep: 0.35, grab: 0.445, charge: 0.543, fireball: 0.485, block: 0.51, hurt: 0.573, stun: 0.546, knockdown: 0.5, victory: 0.446 },
+  flavio: { idle: 0.474, walk: 0.396, crouch: 0.512, jump: 0.53, punch: 0.383, hook: 0.384, uppercut: 0.501, kick: 0.31, airkick: 0.323, sweep: 0.397, grab: 0.434, charge: 0.54, fireball: 0.483, block: 0.516, hurt: 0.435, stun: 0.535, knockdown: 0.5, victory: 0.445 },
+};
+
+/** Hadouken energy colours — Lula red, Flávio blue (like the reference sheet). */
+export const SPECIAL_COLORS: Record<CharacterId, { core: string; mid: string; outer: string; sparks: string[] }> = {
+  lula: { core: "#fff4e6", mid: "#ff2d1a", outer: "rgba(255,40,0,0.45)", sparks: ["#ff2d1a", "#ff8a3d", "#ffe0c0"] },
+  flavio: { core: "#eef8ff", mid: "#3aa0ff", outer: "rgba(90,70,255,0.45)", sparks: ["#3aa0ff", "#8f7bff", "#d9f1ff"] },
 };
 
 export const spritePath = (id: CharacterId, pose: Pose) => `/sprites/${id}_${pose}.png`;

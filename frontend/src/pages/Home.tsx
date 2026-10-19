@@ -46,6 +46,7 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<ArenaEngine | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
+  const pendingRef = useRef<GiftEvent[]>([]);
   const queryClient = useQueryClient();
   const right: CharacterId = left === "lula" ? "flavio" : "lula";
   const { events: socketEvents, status: socketStatus } = useGiftSocket("main-arena");
@@ -59,11 +60,13 @@ export default function Home() {
   useEffect(() => { if (configQuery.data) setLiveConfig(configQuery.data); }, [configQuery.data]);
   useEffect(() => { engineRef.current?.setSettings(liveConfig.combat); }, [liveConfig.combat]);
 
-  /** Single entry point for every validated gift (socket or demo). The engine dedupes by event_id. */
+  /** Single entry point for every validated gift (socket or demo), deduped by event_id. */
   const receiveGift = useCallback((event: GiftEvent) => {
-    // Gifts no longer trigger specials (removed); they are only announced until the new gifts are added.
     if (seenRef.current.has(event.event_id)) return;
     seenRef.current.add(event.event_id);
+    // Gifts with a special (Rosa → Hadouken) fire it in the arena; outside the arena they wait.
+    if (engineRef.current) engineRef.current.triggerSpecial(event);
+    else pendingRef.current.push(event);
     setCaptions((current) => [...current, event]);
     setLastGift(event);
     setRecent((current) => [event, ...current.filter((item) => item.event_id !== event.event_id)].slice(0, 5));
@@ -83,6 +86,7 @@ export default function Home() {
       },
     });
     engineRef.current = engine;
+    pendingRef.current.splice(0).forEach((event) => engine.triggerSpecial(event));
     return () => { engine.destroy(); engineRef.current = null; };
     // Settings are pushed via setSettings; only fighters/screen recreate the engine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,7 +139,7 @@ export default function Home() {
           <h1 data-testid="game-title">BRASIL<br /><span>FIGHT ARENA</span></h1>
           <div className="live-mode-card arcade-panel" data-testid="tiktok-live-mode-card">
             <div className="live-mode-head"><span className="live-dot-icon"><Radio size={22} /></span><div><b data-testid="tiktok-live-mode-label">TIKTOK LIVE</b><small data-testid="tiktok-live-mode-status">{connection.text}</small></div></div>
-            <p data-testid="tiktok-live-mode-subtitle">Os lutadores trocam golpes sozinhos. Os novos presentes da audiência chegam na próxima atualização.</p>
+            <p data-testid="tiktok-live-mode-subtitle">Os lutadores trocam golpes sozinhos. Envie uma Rosa e seu lutador solta um Hadouken!</p>
             <Button type="button" className="start-button live-enter-button" data-testid="enter-live-arena-button" onClick={enterArena}><span>ENTRAR NA ARENA LIVE</span><ChevronRight size={22} /></Button>
             {liveConfig.integration_mode === "demo" || connection.tone !== "ok"
               ? <small className="live-mode-note" data-testid="demo-mode-note">Sem conexão real com o TikTok: a arena abre em modo demonstração e os presentes são simulados pelo painel ADMIN.</small>
@@ -163,7 +167,7 @@ export default function Home() {
                 {roundResult && <div className="round-result" data-testid="round-result-banner">{roundResult}</div>}
               </div>
               <div className="hud-strip">
-                <span data-testid="fight-mode-indicator">LUTA AUTOMÁTICA</span>
+                <span data-testid="fight-mode-indicator">{hud && hud.specials > 0 ? `ESPECIAL: HADOUKEN${hud.specials > 1 ? ` x${hud.specials}` : ""}` : "LUTA AUTOMÁTICA"}</span>
                 <span data-testid="knockdown-count">QUEDAS <b>{hud?.stats.knockdowns ?? 0}</b></span>
                 <span data-testid="timer-display">TEMPO <b>{Math.ceil(hud?.timeLeft ?? liveConfig.combat.fight_duration_sec)}</b></span>
               </div>
@@ -172,8 +176,8 @@ export default function Home() {
               <div className="gift-callout">
                 <span data-testid="last-gift-label"><b className="gift-callout-icon" data-testid="last-gift-icon">{lastGift ? giftIcon(lastGift.gift_id) : "🎁"}</b>{lastGift ? `${lastGift.gift_name.toUpperCase()}${lastGift.quantity > 1 ? ` x${lastGift.quantity}` : ""}` : "AGUARDANDO PRESENTES"}{lastGift?.source === "demo" && <i className="demo-chip" data-testid="last-gift-simulated-chip">SIMULADO</i>}</span>
                 <small data-testid="last-gift-user">{lastGift ? `ENVIADO POR: @${lastGift.username}` : "NENHUM PRESENTE NESTA LUTA"}</small>
-                <strong data-testid="last-gift-action">{lastGift ? "PRESENTE RECEBIDO" : "PRESENTES: EM BREVE"}</strong>
-                <em data-testid="last-gift-note">{lastGift ? `OBRIGADO, @${lastGift.username}!` : "NOVOS PRESENTES EM BREVE"}</em>
+                <strong data-testid="last-gift-action">{lastGift ? (lastGift.special_move === "hadouken" ? "ESPECIAL: HADOUKEN" : "PRESENTE RECEBIDO") : "ENVIE UMA ROSA = HADOUKEN"}</strong>
+                <em data-testid="last-gift-note">{lastGift ? `OBRIGADO, @${lastGift.username}!` : "🌹 ROSA SOLTA UM HADOUKEN"}</em>
               </div>
               <div className="broadcast-stats">
                 <div className="gift-history" data-testid="gift-history-strip">{recent.length === 0 ? <span data-testid="gift-history-empty">—</span> : recent.map((event) => <span key={event.event_id} title={`@${event.username}`} data-testid={`gift-history-chip-${event.sequence}`}>{giftIcon(event.gift_id)}</span>)}</div>

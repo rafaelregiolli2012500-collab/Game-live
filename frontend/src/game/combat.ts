@@ -7,8 +7,20 @@ import { GROUND_Y } from "./assets";
 import { shake, type Camera } from "./camera";
 import { applyDamage } from "./damage";
 import { burst, flash, ring, type Effects } from "./effects";
-import { AIRKICK_AIR, MOVES } from "./moves";
+import { SPECIAL_COLORS } from "./assets";
+import { AIRKICK_AIR, HADOUKEN_RELEASE, MOVES } from "./moves";
+
+const SPECIAL_SPARKS = { lula: SPECIAL_COLORS.lula.sparks, flavio: SPECIAL_COLORS.flavio.sparks };
 import type { BasicMove, CombatStats, Fighter, FighterState, HitOutcome } from "./types";
+
+export interface Projectile {
+  owner: Fighter;
+  x: number;
+  y: number;
+  vx: number;
+  age: number;
+  damage: number;
+}
 
 export interface CombatContext {
   settings: CombatSettings;
@@ -17,6 +29,7 @@ export interface CombatContext {
   stats: CombatStats;
   time: number;
   sound: (power: number) => void;
+  projectiles: Projectile[];
 }
 
 let attackCounter = 0;
@@ -24,7 +37,7 @@ let attackCounter = 0;
 export function createFighter(id: Fighter["id"], x: number, hp: number, facing: 1 | -1 = 1): Fighter {
   return {
     id, x, y: 0, vx: 0, vy: 0, facing, hp, state: "idle", stateTime: 0, stateDuration: 0, move: null, moveTime: 0, impactsDone: 0, attackId: 0, combo: [],
-    pose: "idle", ox: 0, oy: 0, rot: 0, squash: 1, flash: 0, stunBuild: 0, stunImmune: 0, invuln: 0, grabPartner: null,
+    pose: "idle", ox: 0, oy: 0, rot: 0, squash: 1, flash: 0, stunBuild: 0, stunImmune: 0, invuln: 0, grabPartner: null, special: null,
     ai: { cooldown: 0.6 + Math.random() * 0.6, stance: "aggressive", stanceTimer: 2, reactedTo: 0, counterWindow: 0, lastGrab: -10, recentHits: 0, seenMoves: [], moveDir: 0, moveTimer: 0, lastOutcome: null },
   };
 }
@@ -113,8 +126,35 @@ export function knockDown(attacker: Fighter, target: Fighter, ctx: CombatContext
   shake(ctx.camera, 9);
 }
 
-const HIT_HEIGHT: Record<BasicMove, number> = { jab: 165, hook: 160, uppercut: 190, kick: 185, sweep: 30, airkick: 175, grab: 150 };
-const POWER: Record<BasicMove, number> = { jab: 0.6, hook: 1, uppercut: 1.1, kick: 1, sweep: 0.8, airkick: 1, grab: 0.5 };
+const HIT_HEIGHT: Record<BasicMove, number> = { jab: 165, hook: 160, uppercut: 190, kick: 185, sweep: 30, airkick: 175, grab: 150, hadouken: 140 };
+const POWER: Record<BasicMove, number> = { jab: 0.6, hook: 1, uppercut: 1.1, kick: 1, sweep: 0.8, airkick: 1, grab: 0.5, hadouken: 1.6 };
+
+/** Hand offsets (canvas px from body centre / feet) where the energy ball is released. */
+export const FIREBALL_HAND = { dx: 104, dy: -140 };
+
+/** Moves energy balls; a ball always connects with its target (gift damage is guaranteed). */
+export function updateProjectiles(ctx: CombatContext, fighters: Fighter[], dt: number) {
+  ctx.projectiles = ctx.projectiles.filter((p) => {
+    p.age += dt;
+    p.x += p.vx * dt;
+    const target = fighters.find((f) => f !== p.owner);
+    if (!target) return false;
+    if (Math.random() < 0.7) burst(ctx.fx, p.x - Math.sign(p.vx) * 26, p.y + (Math.random() - 0.5) * 30, SPECIAL_SPARKS[p.owner.id], 1, 70, 0);
+    if (Math.abs(target.x - p.x) < 58 || Math.sign(target.x - p.x) !== Math.sign(p.vx)) {
+      const colors = SPECIAL_SPARKS[p.owner.id];
+      target.invuln = 0;
+      if (target.state === "grabbed" && target.grabPartner) { target.grabPartner.grabPartner = null; target.grabPartner = null; }
+      if (target.state === "knockdown") { target.flash = 0.2; ctx.sound(1.6); }
+      else reactToContact(p.owner, target, "hit", 1.6, 0.5, ctx, colors, GROUND_Y - p.y);
+      burst(ctx.fx, p.x, p.y, colors, 26, 380);
+      ring(ctx.fx, p.x, p.y, colors[0], 1.6);
+      flash(ctx.fx, 0.35, colors[0]);
+      applyDamage(ctx.settings, { target, amount: p.damage, source: "gift", outcome: "hit" });
+      return false;
+    }
+    return p.x > -80 && p.x < 1040;
+  });
+}
 
 /** Advances a basic move; simulates contact at impact frames; chains combos. */
 export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: number) {
@@ -128,6 +168,23 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
   if ((f.move === "jab" || f.move === "hook") && t > 0.08 && t < 0.22) f.x += f.facing * 55 * dt;
   if (f.move === "kick" && t > 0.1 && t < 0.24) f.x += f.facing * 30 * dt;
   if (f.move === "sweep" && t > 0.1 && t < 0.26) f.x += f.facing * 45 * dt;
+  // While charging, open space so the energy ball is seen travelling (attacker slides back; if cornered, the opponent is pushed).
+  if (f.move === "hadouken" && t < HADOUKEN_RELEASE) {
+    const need = 260 - Math.abs(other.x - f.x);
+    if (need > 0) {
+      const move = Math.min(need, 900 * dt);
+      const nx = Math.max(70, Math.min(890, f.x - f.facing * move));
+      const rest = move - Math.abs(nx - f.x);
+      f.x = nx;
+      if (rest > 0 && other.state !== "grabbed") other.x = Math.max(70, Math.min(890, other.x + f.facing * rest));
+    }
+  }
+  if (f.move === "hadouken" && f.special && t >= HADOUKEN_RELEASE && t - step < HADOUKEN_RELEASE) {
+    ctx.projectiles.push({ owner: f, x: f.x + f.facing * FIREBALL_HAND.dx, y: GROUND_Y + FIREBALL_HAND.dy, vx: f.facing * 520, age: 0, damage: f.special.damage });
+    f.special = null;
+    ctx.sound(1.4);
+    shake(ctx.camera, 4);
+  }
   if (f.move === "airkick") f.vx = t > AIRKICK_AIR[0] && t < AIRKICK_AIR[1] - 0.12 ? f.facing * 290 : 0;
 
   if (f.impactsDone < def.impacts.length && t >= def.impacts[f.impactsDone]) {

@@ -31,7 +31,7 @@ export function GiftCaptions({ captions, durationMs, onDone }: GiftCaptionsProps
       <span className="gift-caption-icon" data-testid="gift-caption-icon">{giftIcon(current.gift_id)}</span>
       <div className="gift-caption-body">
         <strong data-testid="gift-caption-title">{received}{current.quantity > 1 ? ` x${current.quantity}` : ""} RECEBIDO!{current.source === "demo" ? <i data-testid="gift-caption-demo"> SIMULADO</i> : null}</strong>
-        <span data-testid="gift-caption-text">ENVIADO POR @{current.username}</span>
+        <span data-testid="gift-caption-text">@{current.username}{current.special_move === "hadouken" ? " ATIVOU: HADOUKEN" : ""}</span>
       </div>
       {captions.length > 1 && <em data-testid="gift-caption-backlog">+{captions.length - 1}</em>}
     </div>

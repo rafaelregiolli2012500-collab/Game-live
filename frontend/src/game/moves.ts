@@ -27,7 +27,12 @@ export const MOVES: Record<BasicMove, MoveDef> = {
   sweep: { duration: 0.74, impacts: [0.22], minRange: 0, maxRange: 165, blockable: true, damageKey: "common", stun: 0, knockdown: true },
   airkick: { duration: 0.95, impacts: [0.5], minRange: 0, maxRange: 150, blockable: true, damageKey: "combo", stun: 0.6 },
   grab: { duration: 1.55, impacts: [0.22], minRange: 0, maxRange: 128, blockable: false, damageKey: "common", stun: 0 },
+  // Gift special: no melee contact — the energy ball (combat.updateProjectiles) carries the damage.
+  hadouken: { duration: 0.9, impacts: [], minRange: 0, maxRange: 2000, blockable: false, damageKey: "combo", stun: 0 },
 };
+
+/** Moment (s) the hadouken energy ball leaves the hands. */
+export const HADOUKEN_RELEASE = 0.36;
 
 export const COMBOS: BasicMove[][] = [
   ["jab", "jab"],
@@ -102,6 +107,11 @@ const MOVE_CLIPS: Record<BasicMove, Clip> = {
     { at: 0, pose: "idle", ox: 0, rot: 0 }, { at: 0.06, pose: "grab", ox: 6 }, { at: 0.22, ox: 22 }, { at: 0.5, ox: 20, rot: 0.03 },
     { at: 0.75, ox: 22, rot: -0.02 }, { at: 1.0, ox: 20, rot: 0.03 }, { at: 1.05, pose: "hook", ox: 12, rot: -0.12 },
     { at: 1.3, pose: "idle", ox: 4, rot: 0 }, { at: 1.55, ox: 0 },
+  ] },
+  // Hadouken (reference sheet special): hands gather energy at the hip → thrust forward → hold → recover.
+  hadouken: { duration: 0.9, keys: [
+    { at: 0, pose: "idle", ox: 0 }, { at: 0.05, pose: "charge", ox: -4, sy: 1 }, { at: 0.3, ox: -10, sy: 0.98 },
+    { at: 0.34, pose: "fireball", ox: 6, sy: 1 }, { at: 0.42, ox: 14 }, { at: 0.7, ox: 10 }, { at: 0.74, pose: "idle", ox: 4 }, { at: 0.9, ox: 0 },
   ] },
 };
 

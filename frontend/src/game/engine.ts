@@ -1,13 +1,13 @@
 /**
  * ArenaEngine — single requestAnimationFrame loop orchestrating:
  * AI (ai.ts) → move/contact (combat.ts) → damage (damage.ts) → camera → effects → render.
- * Gift specials were removed; gifts are handled outside the engine until the new ones are added.
+ * Gift specials: triggerSpecial() queues a hadouken for the benefited fighter; it fires as soon as he is free.
  */
-import type { CombatSettings } from "@/lib/live";
+import type { CombatSettings, GiftEvent } from "@/lib/live";
 import { updateAi } from "./ai";
 import { CHARACTERS, loadImages } from "./assets";
 import { createCamera, resetCamera, updateCamera } from "./camera";
-import { createFighter, isAirborne, setState, updateMove, type CombatContext } from "./combat";
+import { createFighter, isAirborne, isFree, setState, startMove, updateMove, updateProjectiles, type CombatContext } from "./combat";
 import { adminAdjust } from "./damage";
 import { createEffects, updateEffects } from "./effects";
 import { animateMove, animateState } from "./moves";
@@ -17,7 +17,7 @@ import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState }
 const GRAVITY = 1500;
 const ROUND_BREAK_SEC = 7;
 
-export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
+export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
 
 /** Force both fighters to face each other (never show their backs). */
 function lockFacing(a: Fighter, b: Fighter) {
@@ -38,6 +38,8 @@ export class ArenaEngine {
   private paused = false;
   private roundOverAt: number | null = null;
   private banner: RenderState["banner"] = null;
+  /** Gift specials waiting for their fighter to be free (one hadouken each). */
+  private specials: { id: CharacterId; damage: number; username: string }[] = [];
 
   private settings: CombatSettings;
   private left: CharacterId;
@@ -54,7 +56,7 @@ export class ArenaEngine {
     this.callbacks = callbacks;
     this.ctx = canvas.getContext("2d")!;
     this.ctx.imageSmoothingEnabled = false;
-    this.ctxCombat = { settings, fx: createEffects(), camera: createCamera(), stats: emptyStats(), time: 0, sound: (power) => this.playHit(power) };
+    this.ctxCombat = { settings, fx: createEffects(), camera: createCamera(), stats: emptyStats(), time: 0, sound: (power) => this.playHit(power), projectiles: [] };
     this.resetRound();
     this.raf = requestAnimationFrame(this.frame);
   }
@@ -99,6 +101,31 @@ export class ArenaEngine {
 
   restartRound() { this.resetRound(); }
 
+  /** Queues the gift's special: "individual" = one hadouken per unit (max 10), "group" = one with summed damage. */
+  triggerSpecial(event: GiftEvent) {
+    if (event.special_move !== "hadouken") return;
+    const id = event.benefited_character;
+    if (event.repeat_policy === "group") this.specials.push({ id, damage: event.damage * event.quantity, username: event.username });
+    else for (let i = 0; i < Math.min(10, event.quantity); i += 1) this.specials.push({ id, damage: event.damage, username: event.username });
+  }
+
+  private processSpecials() {
+    if (this.roundOverAt !== null) return;
+    for (const f of this.fighters) {
+      if (!isFree(f) || f.y < 0) continue;
+      if (!f.special) {
+        const index = this.specials.findIndex((item) => item.id === f.id);
+        if (index < 0) continue;
+        const [next] = this.specials.splice(index, 1);
+        f.special = { damage: next.damage, username: next.username };
+      }
+      // Fire (or re-fire if a previous attempt was interrupted before the release).
+      f.combo = [];
+      startMove(f, "hadouken", this.ctxCombat);
+      f.invuln = 0.5;
+    }
+  }
+
   private resetRound() {
     // Left faces right (1), right faces left (-1) — they always start looking at each other.
     this.fighters = [
@@ -107,6 +134,7 @@ export class ArenaEngine {
     ];
     this.timeLeft = this.settings.fight_duration_sec;
     this.roundOverAt = null;
+    this.ctxCombat.projectiles = [];
     resetCamera(this.ctxCombat.camera, 8);
     this.banner = { text: `ROUND ${String(this.round).padStart(2, "0")}`, sub: "LUTEM!", until: this.ctxCombat.time + 1.6 };
     this.callbacks.onRoundStart(this.round);
@@ -175,7 +203,7 @@ export class ArenaEngine {
     const dt = Math.min(0.033, (now - this.last) / 1000);
     this.last = now;
     if (!this.paused) this.step(dt);
-    render(this.ctx, this.images, { fighters: this.fighters, camera: this.ctxCombat.camera, fx: this.ctxCombat.fx, timeLeft: this.timeLeft, round: this.round, time: this.ctxCombat.time, banner: this.banner });
+    render(this.ctx, this.images, { fighters: this.fighters, camera: this.ctxCombat.camera, fx: this.ctxCombat.fx, projectiles: this.ctxCombat.projectiles, timeLeft: this.timeLeft, round: this.round, time: this.ctxCombat.time, banner: this.banner });
     if (now - this.hudAt > 100) {
       this.hudAt = now;
       const [a, b] = this.fighters;
@@ -183,6 +211,7 @@ export class ArenaEngine {
       this.callbacks.onHud({
         hp: { [a.id]: a.hp, [b.id]: b.hp } as Record<CharacterId, number>,
         timeLeft: this.timeLeft, round: this.round, stats: { ...this.ctxCombat.stats }, states,
+        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken").length,
       });
     }
     this.raf = requestAnimationFrame(this.frame);
@@ -202,6 +231,8 @@ export class ArenaEngine {
       this.updateFighter(a, b, dt);
       this.updateFighter(b, a, dt);
       this.separate(a, b);
+      this.processSpecials();
+      updateProjectiles(c, this.fighters, dt);
       // Final facing lock after both fighters moved — crossing never leaves them back to back.
       lockFacing(a, b);
       const ko = this.fighters.find((f) => f.hp <= 0);

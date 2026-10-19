@@ -12,9 +12,11 @@ router = APIRouter()
 GAME_ID = "main-arena"
 CONFIG_ID = "default"
 
-# Previous gift rules were removed; new gifts are configured in the next phase.
-DEFAULT_RULES: list[GiftRule] = []
-RULES_VERSION = 2
+# Gift catalogue. Rosa triggers the Hadouken energy-ball special (red for Lula, blue for Flávio).
+DEFAULT_RULES: list[GiftRule] = [
+    GiftRule(gift_id="rose", gift_name="Rosa", reference_value=1, action_name="Hadouken", damage=30, animation_ms=1800, effect_intensity=1.2, special_move="hadouken"),
+]
+RULES_VERSION = 3
 
 _clients: dict[str, set[WebSocket]] = {}
 _queues: dict[str, asyncio.Queue[GiftEvent]] = {}
@@ -28,9 +30,12 @@ async def get_config() -> LiveConfig:
     if stored and stored.get("rules_version", 1) >= RULES_VERSION:
         return LiveConfig(**stored)
     if stored:
-        # One-time migration: keep combat settings, drop every old gift rule.
+        # Migration: v1 rules (old specials) are dropped; then any missing default gift is added.
         stored.pop("_id", None)
-        config = LiveConfig(**{**stored, "rules": DEFAULT_RULES, "rules_version": RULES_VERSION})
+        kept = stored.get("rules", []) if stored.get("rules_version", 1) >= 2 else []
+        ids = {rule.get("gift_id") for rule in kept}
+        rules = kept + [rule.model_dump() for rule in DEFAULT_RULES if rule.gift_id not in ids]
+        config = LiveConfig(**{**stored, "rules": rules, "rules_version": RULES_VERSION})
         await db.live_config.replace_one({"id": CONFIG_ID}, config.model_dump(), upsert=True)
         return config
     config = LiveConfig(id=CONFIG_ID, rules=DEFAULT_RULES, combat=CombatSettings())
@@ -146,6 +151,7 @@ async def simulate_gift(payload: DemoGiftCreate, game_id: str = GAME_ID) -> Gift
         animation_ms=rule.animation_ms,
         effect_intensity=rule.effect_intensity,
         repeat_policy=rule.repeat_policy,
+        special_move=rule.special_move,
         reference_value=rule.reference_value,
         source="demo",
     )
