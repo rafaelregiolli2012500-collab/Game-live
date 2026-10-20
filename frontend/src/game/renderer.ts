@@ -77,8 +77,9 @@ function drawUltraAura(ctx: CanvasRenderingContext2D, images: Images, f: Fighter
   const img = images[FX_SPRITES.ultraAura];
   if (!ready(img)) return;
   const pulse = 1 + Math.sin(time * 18) * 0.045;
-  const w = 235 * pulse;
-  const h = 305 * pulse;
+  const charge = Math.min(1, f.moveTime / ULTRA_RELEASE);
+  const w = (155 + charge * 130) * pulse;
+  const h = (220 + charge * 150) * pulse;
   ctx.save();
   ctx.globalAlpha = 0.78;
   ctx.globalCompositeOperation = "lighter";
@@ -270,8 +271,8 @@ function drawUltraBeam(ctx: CanvasRenderingContext2D, images: Images, p: Project
   }
   const fatality = p.kind === "fatality";
   const pulse = 1 + Math.sin((time + p.age) * 30) * 0.035;
-  const w = (fatality ? 440 : 330) * pulse;
-  const h = (fatality ? 176 : 132) * pulse;
+  const w = (fatality ? 680 : 500) * pulse;
+  const h = (fatality ? 248 : 188) * pulse;
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.scale(Math.sign(p.vx), 1);

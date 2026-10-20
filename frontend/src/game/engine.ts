@@ -7,7 +7,7 @@ import { BOOST_DURATION_SEC, BOOST_STEP, DAMAGE_BOOST_MAX, DEFENSE_BOOST_MAX, ty
 import { updateAi } from "./ai";
 import { CHARACTERS, DOMAINS, SOUND_FILES, loadImages } from "./assets";
 import { createCamera, resetCamera, updateCamera } from "./camera";
-import { createFighter, isAirborne, isFree, setState, startMove, updateMove, updateProjectiles, type CombatContext } from "./combat";
+import { createFighter, isAirborne, isFree, setState, startMove, updateMove, updateProjectiles, type CombatContext, type SoundCue } from "./combat";
 import { adminAdjust } from "./damage";
 import { endDomain, startDomain, updateDomain, type Domain } from "./domain";
 import { burst, createEffects, updateEffects } from "./effects";
@@ -55,6 +55,11 @@ export class ArenaEngine {
   private bufferSources = new Set<AudioBufferSourceNode>();
   private clips = new Set<HTMLAudioElement>();
   private strongSound = 0;
+  private punchSound = 0;
+  private musicTimer: number | null = null;
+  private musicOscillators: OscillatorNode[] = [];
+  private musicGain: GainNode | null = null;
+  private musicStep = 0;
 
   constructor(canvas: HTMLCanvasElement, settings: CombatSettings, left: CharacterId, right: CharacterId, callbacks: EngineCallbacks) {
     this.settings = settings;
@@ -66,12 +71,14 @@ export class ArenaEngine {
     this.ctxCombat = { settings, fx: createEffects(), camera: createCamera(), stats: emptyStats(), time: 0, sound: (power, fighter, cue, speed) => this.playHit(power, fighter, cue, speed), onFatalityHit: (winner) => this.callbacks.onFatalityComplete(winner), projectiles: [] };
     this.resetRound();
     void this.preloadAudio();
+    this.startMusic();
     this.raf = requestAnimationFrame(this.frame);
   }
 
-  destroy() { cancelAnimationFrame(this.raf); this.clips.forEach((clip) => clip.pause()); this.clips.clear(); this.bufferSources.forEach((source) => { try { source.stop(); } catch { /* already stopped */ } }); this.bufferSources.clear(); void this.audio?.close(); }
-  setVolume(volume: number) { this.volume = volume; }
+  destroy() { cancelAnimationFrame(this.raf); this.stopMusic(); this.clips.forEach((clip) => clip.pause()); this.clips.clear(); this.bufferSources.forEach((source) => { try { source.stop(); } catch { /* already stopped */ } }); this.bufferSources.clear(); void this.audio?.close(); }
+  setVolume(volume: number) { this.volume = volume; if (volume > 0) { this.startMusic(); if (this.musicGain) this.musicGain.gain.value = volume * 0.026; } else this.stopMusic(); }
   setPaused(paused: boolean) { this.paused = paused; }
+  notifyGift(speed = 1) { this.playHit(0.4, undefined, "gift-alert", speed); }
 
   private ensureAudio() {
     this.audio ??= new AudioContext();
@@ -90,8 +97,13 @@ export class ArenaEngine {
     } catch { /* HTMLAudio fallback remains available */ }
   }
 
-  private playHit(power: number, fighter?: CharacterId, cue: "basic" | "special-start" | "special-impact" = "basic", speed = 1) {
+  private playHit(power: number, fighter?: CharacterId, cue: SoundCue = "basic-punch", speed = 1) {
     if (this.volume <= 0) return;
+    if (cue === "gift-alert") { this.playGiftAlert(speed); return; }
+    if (cue === "ultra-charge") { this.playClip(SOUND_FILES.animePowerup, this.volume * 0.72, 4300, speed, power); return; }
+    if (cue === "ultra-wave") { this.playClip(SOUND_FILES.strongEnergyWave, this.volume * 0.9, 3500, speed, power); return; }
+    if (cue === "hadouken-start") { this.playClip(SOUND_FILES.surprised, this.volume * 0.72, 1800, speed, power); return; }
+    if (cue === "knockdown") { this.playClip(SOUND_FILES.struggleStand, this.volume * 0.62, 1500, speed, power); return; }
     if (cue === "special-start") {
       if (fighter !== "lula") return;
       this.playClip(SOUND_FILES.lulaSpecial, this.volume * 0.9, 5200, speed, power);
@@ -101,8 +113,72 @@ export class ArenaEngine {
       this.playClip([SOUND_FILES.flashbang, SOUND_FILES.faah][this.strongSound++ % 2], this.volume * 0.72, 1500, speed, power);
       return;
     }
-    // Basic punches and kicks use only the supplied ordinary impact sample.
+    if (cue === "basic-punch") {
+      const source = [SOUND_FILES.punch, SOUND_FILES.multiplePunches][this.punchSound++ % 2];
+      this.playClip(source, this.volume * 0.55, source === SOUND_FILES.punch ? 650 : 950, 1, power);
+      return;
+    }
+    // Kicks keep the single punch/impact sample; only punches alternate.
     this.playClip(SOUND_FILES.punch, this.volume * 0.55, 650, 1, power);
+  }
+
+  private playGiftAlert(speed: number) {
+    try {
+      const audio = this.ensureAudio();
+      void audio.resume();
+      [660, 990].forEach((frequency, index) => {
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        const at = audio.currentTime + index * 0.07 / speed;
+        oscillator.type = "square";
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(this.volume * 0.055, at);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.1 / speed);
+        oscillator.connect(gain).connect(audio.destination);
+        oscillator.start(at);
+        oscillator.stop(at + 0.11 / speed);
+      });
+    } catch { /* notification is best effort */ }
+  }
+
+  private startMusic() {
+    if (this.volume <= 0 || this.musicTimer !== null) return;
+    try {
+      const audio = this.ensureAudio();
+      void audio.resume();
+      const gain = audio.createGain();
+      gain.gain.value = this.volume * 0.026;
+      gain.connect(audio.destination);
+      const bass = audio.createOscillator();
+      const lead = audio.createOscillator();
+      bass.type = "square";
+      lead.type = "triangle";
+      bass.connect(gain);
+      lead.connect(gain);
+      bass.start();
+      lead.start();
+      this.musicGain = gain;
+      this.musicOscillators = [bass, lead];
+      const bassNotes = [82.41, 82.41, 98, 110, 82.41, 123.47, 110, 98];
+      const leadNotes = [329.63, 392, 440, 392, 493.88, 440, 392, 329.63];
+      const tick = () => {
+        const now = audio.currentTime;
+        const index = this.musicStep++ % bassNotes.length;
+        bass.frequency.setTargetAtTime(bassNotes[index], now, 0.018);
+        lead.frequency.setTargetAtTime(leadNotes[index], now, 0.018);
+      };
+      tick();
+      this.musicTimer = window.setInterval(tick, 280);
+    } catch { /* music unavailable */ }
+  }
+
+  private stopMusic() {
+    if (this.musicTimer !== null) window.clearInterval(this.musicTimer);
+    this.musicTimer = null;
+    this.musicOscillators.forEach((oscillator) => { try { oscillator.stop(); } catch { /* already stopped */ } });
+    this.musicOscillators = [];
+    this.musicGain?.disconnect();
+    this.musicGain = null;
   }
 
   private playClip(source: string, volume: number, stopAfter: number, speed: number, fallbackPower?: number) {
@@ -238,12 +314,18 @@ export class ArenaEngine {
           if (!isFree(victim) || victim.y < 0 || this.ctxCombat.projectiles.length) { this.specials.splice(index, 0, next); continue; }
           f.x = Math.max(90, Math.min(870, victim.x - f.facing * 108));
         }
+        if (next.kind === "ultra_hadouken" || next.kind === "fatality") {
+          victim.combo = [];
+          victim.grabPartner = null;
+          setState(victim, "idle");
+        }
         f.special = { kind: next.kind, damage: next.damage, username: next.username, speed: next.speed };
       }
       // Start the scripted gift move (or re-fire if an attempt was interrupted before release).
       f.combo = [];
       const move = f.special.kind === "shoryuken" ? "shoryuken" : f.special.kind === "hadouken" ? "hadouken" : "ultra_hadouken";
       if (move === "shoryuken") this.playHit(1.8, f.id, "special-start", f.special.speed);
+      if (move === "ultra_hadouken") this.playHit(2.2, f.id, "ultra-charge", f.special.speed);
       startMove(f, move, this.ctxCombat, f.special.speed);
       f.invuln = 0.5;
     }
@@ -309,7 +391,11 @@ export class ArenaEngine {
     if (f.y < 0 || f.vy !== 0) {
       f.vy += GRAVITY * dt;
       f.y = Math.min(0, f.y + f.vy * dt);
-      if (f.y >= 0) { f.vy = 0; f.y = 0; }
+      if (f.y >= 0) {
+        f.vy = 0;
+        f.y = 0;
+        if (f.fallSoundPending) { f.fallSoundPending = false; this.playHit(0.9, f.id, "knockdown", f.moveSpeed); }
+      }
     }
     f.x += f.vx * dt;
     if (f.y >= 0 && f.move !== "airkick") f.vx *= Math.exp(-7 * dt);
@@ -371,8 +457,23 @@ export class ArenaEngine {
       }
     } else if (this.roundOverAt !== null) {
       this.fighters.forEach((f) => { f.stateTime += dt; this.physics(f, dt); animateState(f, c.time); });
+      if (c.projectiles.length) updateProjectiles(c, this.fighters, dt);
       lockFacing(a, b);
       if (c.time - this.roundOverAt >= ROUND_BREAK_SEC) { this.round += 1; this.resetRound(); }
+    } else if (this.fighters.some((fighter) => fighter.move === "ultra_hadouken")) {
+      // Four-second cinematic charge: timer and opponent AI pause while the attacker powers up.
+      const attacker = this.fighters.find((fighter) => fighter.move === "ultra_hadouken")!;
+      const victim = this.fighters.find((fighter) => fighter !== attacker)!;
+      this.updateFighter(attacker, victim, dt);
+      victim.stateTime += dt;
+      victim.flash = Math.max(0, victim.flash - dt);
+      this.physics(victim, dt);
+      if (victim.state !== "knockdown") animateState(victim, c.time);
+      else animateState(victim, c.time);
+      updateProjectiles(c, this.fighters, dt);
+      lockFacing(a, b);
+      const ko = this.fighters.find((fighter) => fighter.hp <= 0);
+      if (ko) this.endRound(this.fighters.find((fighter) => fighter !== ko)!);
     } else {
       this.timeLeft = Math.max(0, this.timeLeft - dt);
       lockFacing(a, b);

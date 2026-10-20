@@ -63,6 +63,8 @@ export interface Fighter {
   defBoost: Boost;
   /** 0..1 ice intensity while frozen inside an opponent's domain. */
   frozen: number;
+  /** Plays the landing sample exactly once when a knockdown reaches the floor. */
+  fallSoundPending: boolean;
   ai: AiMemory;
 }
 

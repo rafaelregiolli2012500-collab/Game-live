@@ -75,6 +75,7 @@ export default function Home() {
     const event = giftQueueRef.current.shift()!;
     activeGiftRef.current = event;
     const speed = giftSpeedRef.current.get(event.id) ?? 1;
+    engineRef.current?.notifyGift(speed);
     setCaptionSpeed(speed);
     setCaptions([event]);
   }, []);

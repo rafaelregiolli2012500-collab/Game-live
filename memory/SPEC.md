@@ -67,3 +67,10 @@ The public `/sprites` directory contains the reference stage, character sprites 
 - Gift processing is strictly serialized: cutscene 1 → complete effect/special 1 → cutscene 2 → complete effect/special 2. `ArenaEngine.onSpecialComplete(eventId)` advances the browser queue only when all repeated units, projectiles or Domain animation for that event are finished.
 - Quantity >1 or consecutive gifts from the same username use 2× cutscene, special movement/projectile and audio playback while retaining the original quantity and damage per unit.
 - Audio files are decoded into Web Audio buffers before impact where possible; scheduled playback starts on the exact release/impact frame and uses the same per-gift playback rate to avoid lag.
+
+## v9 — Four-second Ultra cinematic, expanded sound design and background music
+- Universo/Fatality now owns a four-second focused charge scene: opponent AI + round timer pause, camera zooms onto the attacker, supplied aura grows, `anime-powerup.mp3` plays during charge, then the enlarged supplied beam crosses beyond the entire arena with `strong-energy-wave.mp3`. Accelerated gift batches run movement/projectile/audio at 2×.
+- Audio cues: normal Hadouken release = `surprised.mp3`; punches alternate `punch.mp3` / `multiple-punches.mp3`; kicks keep `punch.mp3`; `struggle-stand.mp3` fires on the exact frame a knocked-down fighter lands; special impacts retain alternating Flashbang/Faah.
+- Every queued thank-you cutscene is preceded by a short synthesized two-note audio notification (no visual notification), scaled to the batch playback speed.
+- Low-volume synthesized arcade/anime background music loops through Web Audio and follows the existing sound toggle and volume slider.
+- Backend/default config `rules_version: 7`; Universo `animation_ms` is 4800 to reflect its longer cinematic.

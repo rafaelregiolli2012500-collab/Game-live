@@ -40,6 +40,8 @@ const seg = (t: number, a: number, b: number) => Math.max(0, Math.min(1, (t - a)
 
 export function startDomain(attacker: Fighter, victim: Fighter, damage: number, speed = 1): Domain {
   [attacker, victim].forEach((f) => { f.combo = []; f.grabPartner = null; f.vx = 0; f.vy = 0; f.y = 0; f.special = null; });
+  attacker.moveSpeed = speed;
+  victim.moveSpeed = speed;
   setState(attacker, "domain");
   setState(victim, "frozen");
   attacker.facing = victim.x >= attacker.x ? 1 : -1;

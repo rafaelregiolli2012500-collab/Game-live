@@ -49,6 +49,11 @@ export const SOUND_FILES = {
   faah: "/audio/faah.mp3",
   lulaSpecial: "/audio/lula-special.mp3",
   punch: "/audio/punch.mp3",
+  multiplePunches: "/audio/multiple-punches.mp3",
+  strongEnergyWave: "/audio/strong-energy-wave.mp3",
+  animePowerup: "/audio/anime-powerup.mp3",
+  surprised: "/audio/surprised.mp3",
+  struggleStand: "/audio/struggle-stand.mp3",
 } as const;
 
 /** Domain expansion per fighter (from the user's domain catalogue). */

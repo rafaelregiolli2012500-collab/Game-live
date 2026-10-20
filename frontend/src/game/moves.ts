@@ -32,12 +32,12 @@ export const MOVES: Record<BasicMove, MoveDef> = {
   // Gift special modelled on the five-frame reference: crouch → charge → rising fist → descent → landing.
   shoryuken: { duration: 1.16, impacts: [0.32], minRange: 0, maxRange: 165, blockable: false, damageKey: "combo", stun: 0, knockdown: true },
   // Giant projectile: long charge and full-map release; damage travels with the orb.
-  ultra_hadouken: { duration: 1.7, impacts: [], minRange: 0, maxRange: 2000, blockable: false, damageKey: "combo", stun: 0 },
+  ultra_hadouken: { duration: 4.7, impacts: [], minRange: 0, maxRange: 2000, blockable: false, damageKey: "combo", stun: 0 },
 };
 
 /** Moment (s) the hadouken energy ball leaves the hands. */
 export const HADOUKEN_RELEASE = 0.36;
-export const ULTRA_RELEASE = 0.72;
+export const ULTRA_RELEASE = 4;
 
 export const COMBOS: BasicMove[][] = [
   ["jab", "jab"],
@@ -130,10 +130,11 @@ const MOVE_CLIPS: Record<BasicMove, Clip> = {
     { at: 1.04, pose: "idle", ox: 4, oy: 0, sy: 1 },
     { at: 1.16, ox: 0, oy: 0 },
   ] },
-  ultra_hadouken: { duration: 1.7, keys: [
+  ultra_hadouken: { duration: 4.7, keys: [
     { at: 0, pose: "crouch", ox: -4, sy: 0.95 }, { at: 0.08, pose: "charge", ox: -10, sy: 1 },
-    { at: 0.5, pose: "charge", ox: -18, sy: 0.98 }, { at: 0.68, pose: "fireball", ox: 8, sy: 1 },
-    { at: 0.82, ox: 24 }, { at: 1.34, ox: 14 }, { at: 1.45, pose: "idle", ox: 5 }, { at: 1.7, ox: 0 },
+    { at: 0.6, pose: "charge", ox: -16, sy: 0.98 }, { at: 2.4, pose: "charge", ox: -22, sy: 1.02 },
+    { at: 3.82, pose: "charge", ox: -26, sy: 0.97 }, { at: 3.96, pose: "fireball", ox: 8, sy: 1 },
+    { at: 4.12, ox: 30 }, { at: 4.42, ox: 16 }, { at: 4.52, pose: "idle", ox: 5 }, { at: 4.7, ox: 0 },
   ] },
 };
 
