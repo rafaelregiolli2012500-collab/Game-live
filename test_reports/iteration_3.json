@@ -1,0 +1,61 @@
+{
+  "iteration": 3,
+  "mode": "retest",
+  "summary": "Re-created the browser check suite (the previous .emergent/scripts/checks directory and iteration_2 artifacts were gone after an environment reset) and verified all 7 acceptance criteria, including the new 'start screen opens arena without login' criterion. All 7 checks passed; one (start-screen-opens-arena) was additionally re-run against the public preview URL as required. No backend test files were needed: every criterion in this matrix has a direct UI surface (gift effects are only observable/triggered through the admin quick-gift buttons and arena HUD), consistent with the prior iteration's coverage approach.",
+  "passed": 7,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "The start screen opens the TikTok LIVE arena without login",
+      "name": "start-screen-opens-arena",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "No login screen present. start-screen visible on load; clicking enter-live-arena-button (ENTRAR NA ARENA LIVE) shows gameplay-screen with vertical-stream-composition, broadcast-left-name=LULA, broadcast-right-name=FLÁVIO, HP displays, timer-display, and broadcast-live-status reading DEMO. Re-ran against public preview URL https://live-game-preview-1.preview.emergentagent.com with identical pass. No console errors."
+    },
+    {
+      "criterion": "Every enabled gift shows a thank-you cutscene before applying its effect",
+      "name": "thanks-cutscene-shows-for-gift",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Via ADMIN quick-gift-rose-button (beneficiary lula, user tscheck_roseuser): thanks-cutscene appeared with title containing OBRIGADO, user containing tscheck_roseuser, and thanks-cutscene-image src containing 'lula'; cutscene then closed (hidden) within 10s before any effect was visibly applied. No console errors."
+    },
+    {
+      "criterion": "Rosa grants a timed damage boost",
+      "name": "rosa-damage-boost-chip",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Sent Rosa for Lula via quick-gift-rose-button (user tscheck_rosa2). After the thanks-cutscene closed, broadcast-left-damage-boost chip became visible showing '+10%' with a countdown. No console errors."
+    },
+    {
+      "criterion": "Coração grants a timed defense boost",
+      "name": "coracao-defense-boost-chip",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Sent Coração for Flávio via quick-gift-heart-button (user tscheck_heart2). After the thanks-cutscene closed, broadcast-right-defense-boost chip became visible showing '+10%' with a countdown. No console errors."
+    },
+    {
+      "criterion": "Rosquinha triggers Hadouken damage",
+      "name": "rosquinha-hadouken-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Captured Flávio's HP before sending (broadcast-right-hp), sent Rosquinha for Lula via quick-gift-donut-button (user tscheck_donut1); after the thanks-cutscene closed, HP dropped by exactly 30 from the pre-gift value. No boosts were active. No console errors."
+    },
+    {
+      "criterion": "Leão triggers Domain Expansion",
+      "name": "leao-domain-expansion",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Captured Flávio's HP before sending, sent Leão for Lula via quick-gift-lion-button (user tscheck_lion1); after the thanks-cutscene closed, fight-mode-indicator read 'DOMÍNIO: ARENA SANGRENTA' and HP dropped by a value within [110,125] (assertion enforced both bounds) with no active boosts. No console errors."
+    },
+    {
+      "criterion": "Restarting the round clears active boosts",
+      "name": "boosts-reset-on-restart",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "After producing a visible broadcast-left-damage-boost chip via a Rosa gift, clicking restart-round-button (REINICIAR RODADA) removed it; all four boost-chip testids (left/right x damage/defense) had count 0 after restart. No console errors."
+    }
+  ]
+}
