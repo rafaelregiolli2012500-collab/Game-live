@@ -15,6 +15,9 @@ AUDIO = {
     "genkidama-impact.mp3": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/70edb5cf8e70b716_SOM%20DE%20EXPLOS%C3%83O%28MP3_160K%29.mp3",
     "lula-special-alt.mp3": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/697c55f78db24b41_km_20261020-1_720p_30f_20261020_164716%20%28online-audio-converter.com%29.mp3",
     "flavio-special.mp3": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/92a72fb2d0c8f37e_km_20261020_720p_30f_20261020_162826%20%28online-audio-converter.com%29.mp3",
+    "special-impact-3.mp3": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/1d4aac0c9ec6ea13_e038b8b61d33f4fd3e547dd3dd22b089%20%28online-audio-converter.com%29.mp3",
+    "victory.mp3": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/c5eff58bd8be74c2_Victory%20Sound%20Effect%28MP3_160K%29.mp3",
+    "gift-success.mp3": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/93fc9486d5297242_success%20-%20Sound%20Effect%28MP3_160K%29.mp3",
 }
 
 GENKIDAMA_SOURCE = "https://static.prod-images.emergentagent.com/jobs/0c884798-ceeb-40dc-858f-c0cf11092d85/images/7867806b40d9a0a7f71cf01b78724cc13d92120f5a7a801b29d50b16361999b1.jpeg"

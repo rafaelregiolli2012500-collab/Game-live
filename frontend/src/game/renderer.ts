@@ -346,6 +346,8 @@ function drawGiftCinematic(ctx: CanvasRenderingContext2D, images: Images, cinema
   if (kind === "invocadores") {
     if (t < 0.45 || t > 3.58) return;
     const frame = t < 0.72 ? 0 : t < 1.16 ? 1 : t < 1.5 ? 2 : t < 2.42 ? 3 : 4;
+    const xandeHeights = [310, 300, 330, 380, 420] as const;
+    const xandeHeight = xandeHeights[frame];
     const summonX = victim.x - attacker.facing * 112;
     const sheet = images[FX_SPRITES.invocadorHammer];
     if (t > 1.04 && t < 3.02) {
@@ -371,7 +373,7 @@ function drawGiftCinematic(ctx: CanvasRenderingContext2D, images: Images, cinema
     ctx.save();
     ctx.shadowColor = "#f59e0b";
     ctx.shadowBlur = t < 0.9 ? 30 : 16;
-    drawSheetFrame(ctx, sheet, frame, 256, 320, summonX, GROUND_Y + 5, 222, 286, attacker.facing);
+    drawSheetFrame(ctx, sheet, frame, 256, 320, summonX, GROUND_Y + 5, xandeHeight * 0.8, xandeHeight, attacker.facing);
     ctx.restore();
     if (t > 0.46) {
       ctx.save();

@@ -13,6 +13,7 @@ Entregar uma experiência arcade de luta 2D inspirada no artefato `Jogo-tik-tom-
 - Arena LIVE vertical com presentes configuráveis, fila serial de agradecimento/especial, disputa de 20 presentes, boosts, Domínio, Shoryuken, Ultra/Fatality, Invocadores e Genkidama.
 - Áudio local sincronizado por fase, incluindo vozes alternadas do Lula, voz do Flávio, carga e explosão da Genkidama, além de volume/mudo globais.
 - Cutscene de vitória em tela 9:16 completa com o vencedor e créditos deduplicados de todos os usuários que enviaram presentes na rodada.
+- Histórico persistente e ilimitado de vitórias/derrotas por rodada, com cópia local e sincronização best-effort no backend.
 
 ## Fora do escopo
 Autenticação, pagamentos, multiplayer online e conector real do TikTok (o provedor continua em modo demonstração).

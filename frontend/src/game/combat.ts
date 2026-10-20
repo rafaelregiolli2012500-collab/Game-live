@@ -24,7 +24,7 @@ export interface Projectile {
   hit: boolean;
 }
 
-export type SoundCue = "basic-punch" | "basic-kick" | "special-start" | "special-impact" | "hadouken-start" | "ultra-charge" | "ultra-wave" | "genkidama-charge" | "genkidama-impact" | "knockdown" | "gift-alert";
+export type SoundCue = "basic-punch" | "basic-kick" | "special-start" | "special-impact" | "hadouken-start" | "ultra-charge" | "ultra-wave" | "genkidama-charge" | "genkidama-impact" | "knockdown" | "gift-alert" | "victory";
 
 export interface CombatContext {
   settings: CombatSettings;

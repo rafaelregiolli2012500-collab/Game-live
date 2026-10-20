@@ -90,3 +90,11 @@ The public `/sprites` directory contains the reference stage, character sprites 
 - A sobreposição usa a arte temática e o sprite de vitória do vencedor, informa round/nome e exibe todos os `@usuários` que enviaram presentes naquela rodada, sem duplicar nomes (comparação sem diferenciar maiúsculas/minúsculas) e mantendo a ordem do primeiro envio.
 - A lista de colaboradores é isolada por rodada e zerada em `onRoundStart`; rodada sem presentes mostra “SEM COLABORADORES NESTA RODADA”. Empates não exibem cutscene de vencedor.
 - Testids: `round-credits-cutscene`, `round-credits-winner-name`, `round-credits-users`, `round-credit-user-{n}` e `round-credits-empty`.
+
+## v12 — Histórico infinito, áudio e clareza dos presentes
+- O loop de rounds continua sem limite; cada vitória/derrota é registrada localmente em `planalto-round-history` e best-effort no Mongo via GET/POST `/api/live/results`. O identificador `session_id + round` torna o POST idempotente. ADMIN lista vencedor, derrotado e quantidade de presentes das rodadas recentes.
+- Áudios locais novos: `gift-success.mp3` inicia cada cutscene de agradecimento; `victory.mp3` inicia a cutscene de vitória; `special-impact-3.mp3` entra na rotação sem repetição imediata com Flashbang/Faah nos danos fortes de especiais. Todos seguem volume, mudo e playback acelerado aplicável.
+- Cada botão rápido de presente mostra o nome da especial/efeito logo abaixo; o select também combina “presente — ação”.
+- Disputa: Lula permanece explicitamente vermelho e Flávio passa a ser identificado como TIME VERDE com preenchimento verde.
+- Xande usa escala por quadro (preparação, elevação, balanço e impacto) para manter o corpo proporcional aos lutadores mesmo em poses largas/ajoelhadas.
+- Nenhuma alteração TikFinity foi aplicada; integração real continua fora deste build conforme solicitação posterior do usuário.

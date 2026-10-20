@@ -12,8 +12,8 @@ import { CANVAS_H, CANVAS_W, CHARACTERS, portraitPath } from "@/game/assets";
 import { ArenaEngine, emptyStats } from "@/game/engine";
 import type { CharacterId, HudSnapshot } from "@/game/types";
 import { useGiftSocket } from "@/hooks/useGiftSocket";
-import { DEFAULT_LIVE_CONFIG, fetchLiveConfig, fetchLiveEvents, fetchLiveStatus, giftEffectLabel, giftIcon, sendDemoGift, updateLiveConfig } from "@/lib/live";
-import type { DemoGiftCreate, GiftEvent, LiveConfig, LiveStatus } from "@/lib/live";
+import { DEFAULT_LIVE_CONFIG, fetchLiveConfig, fetchLiveEvents, fetchLiveStatus, fetchRoundResults, giftEffectLabel, giftIcon, saveRoundResult, sendDemoGift, updateLiveConfig } from "@/lib/live";
+import type { DemoGiftCreate, GiftEvent, LiveConfig, LiveStatus, RoundResult, RoundResultCreate } from "@/lib/live";
 
 type Screen = "menu" | "arena";
 type UltraScore = Record<CharacterId, number>;
@@ -21,6 +21,7 @@ interface RoundCredits { winner: CharacterId; round: number; contributors: strin
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 const ULTRA_GOAL = 20;
+const ROUND_HISTORY_KEY = "planalto-round-history";
 
 const EMPTY_STATS = emptyStats();
 
@@ -33,6 +34,25 @@ function readUltraScore(): UltraScore {
     const stored = JSON.parse(localStorage.getItem("planalto-ultra-dispute") ?? "{}") as Partial<UltraScore>;
     return { lula: Math.min(ULTRA_GOAL, Math.max(0, stored.lula ?? 0)), flavio: Math.min(ULTRA_GOAL, Math.max(0, stored.flavio ?? 0)) };
   } catch { return { lula: 0, flavio: 0 }; }
+}
+
+function readRoundHistory(): RoundResult[] {
+  try { return JSON.parse(localStorage.getItem(ROUND_HISTORY_KEY) ?? "[]") as RoundResult[]; } catch { return []; }
+}
+
+function roundSessionId(): string {
+  const stored = sessionStorage.getItem("planalto-round-session");
+  if (stored) return stored;
+  const created = crypto.randomUUID();
+  sessionStorage.setItem("planalto-round-session", created);
+  return created;
+}
+
+function persistRoundLocally(payload: RoundResultCreate): RoundResult {
+  const saved: RoundResult = { ...payload, id: `local-${payload.session_id}-${payload.round}`, created_at: new Date().toISOString() };
+  const next = [saved, ...readRoundHistory().filter((item) => !(item.session_id === payload.session_id && item.round === payload.round))].slice(0, 500);
+  localStorage.setItem(ROUND_HISTORY_KEY, JSON.stringify(next));
+  return saved;
 }
 
 function connectionLabel(status: LiveStatus, config: LiveConfig) {
@@ -70,6 +90,9 @@ export default function Home() {
   const fatalityLockRef = useRef(false);
   const fatalityEventsRef = useRef<Set<string>>(new Set());
   const roundContributorsRef = useRef<string[]>([]);
+  const giftsThisFightRef = useRef(0);
+  const hudRef = useRef<HudSnapshot | null>(null);
+  const roundSessionRef = useRef(roundSessionId());
   const queryClient = useQueryClient();
   const right: CharacterId = left === "lula" ? "flavio" : "lula";
   const { events: socketEvents, status: socketStatus } = useGiftSocket("main-arena");
@@ -87,8 +110,10 @@ export default function Home() {
   const configQuery = useQuery({ queryKey: ["live-config"], queryFn: fetchLiveConfig, retry: false, staleTime: 30_000 });
   const eventQuery = useQuery({ queryKey: ["live-events"], queryFn: fetchLiveEvents, retry: false, staleTime: 10_000 });
   const statusQuery = useQuery({ queryKey: ["live-status"], queryFn: fetchLiveStatus, retry: false, staleTime: 15_000 });
+  const resultsQuery = useQuery({ queryKey: ["round-results"], queryFn: fetchRoundResults, retry: false, staleTime: 10_000 });
   const saveConfig = useMutation({ mutationFn: updateLiveConfig, onSuccess: (saved) => { setLiveConfig(saved); queryClient.setQueryData(["live-config"], saved); queryClient.invalidateQueries({ queryKey: ["live-status"] }); toast.success("Configuração salva"); }, onError: () => toast.error("Não foi possível salvar a configuração") });
   const demoGift = useMutation({ mutationFn: sendDemoGift, onSuccess: (event) => { receiveGift(event); queryClient.invalidateQueries({ queryKey: ["live-events"] }); }, onError: (error) => toast.error(error instanceof Error ? error.message : "Falha ao simular presente") });
+  const recordResult = useMutation({ mutationFn: saveRoundResult, onSuccess: (saved) => { queryClient.setQueryData<RoundResult[]>(["round-results"], (current = []) => [saved, ...current.filter((item) => !(item.session_id === saved.session_id && item.round === saved.round))].slice(0, 500)); } });
 
   useEffect(() => { if (configQuery.data) setLiveConfig(configQuery.data); }, [configQuery.data]);
   useEffect(() => { engineRef.current?.setSettings(liveConfig.combat); }, [liveConfig.combat]);
@@ -112,7 +137,8 @@ export default function Home() {
     setLastGift(event);
     addRoundContributor(event.username);
     setRecent((current) => [event, ...current.filter((item) => item.event_id !== event.event_id)].slice(0, 5));
-    setGiftsThisFight((count) => count + event.quantity);
+    giftsThisFightRef.current += event.quantity;
+    setGiftsThisFight(giftsThisFightRef.current);
     if (!fatalityLockRef.current) {
       const id = event.benefited_character;
       const previous = ultraScoreRef.current[id];
@@ -145,11 +171,12 @@ export default function Home() {
   useEffect(() => {
     if (screen !== "arena" || !canvasRef.current) return undefined;
     const engine = new ArenaEngine(canvasRef.current, liveConfig.combat, left, right, {
-      onHud: setHud,
+      onHud: (snapshot) => { hudRef.current = snapshot; setHud(snapshot); },
       onRoundStart: () => {
         setRoundResult(null);
         setRoundCredits(null);
         roundContributorsRef.current = [];
+        giftsThisFightRef.current = 0;
         setGiftsThisFight(0);
         if (fatalityLockRef.current && ultraScoreRef.current.lula === 0 && ultraScoreRef.current.flavio === 0) fatalityLockRef.current = false;
         if (!fatalityLockRef.current) setFatalityWinner(null);
@@ -157,7 +184,15 @@ export default function Home() {
       onRoundEnd: (winner, endedRound) => {
         setRoundResult(winner ? `${CHARACTERS[winner].name} VENCEU A RODADA` : "EMPATE");
         if (winner) setRoundCredits({ winner, round: endedRound, contributors: [...roundContributorsRef.current] });
-        if (winner) setWins((current) => { const next = { ...current, [winner]: current[winner] + 1 }; localStorage.setItem("planalto-wins", JSON.stringify(next)); return next; });
+        if (winner) {
+          engineRef.current?.notifyVictory();
+          const loser: CharacterId = winner === "lula" ? "flavio" : "lula";
+          const payload: RoundResultCreate = { game_id: "main-arena", session_id: roundSessionRef.current, round: endedRound, winner, loser, contributors: [...roundContributorsRef.current], gifts_count: giftsThisFightRef.current };
+          const local = persistRoundLocally(payload);
+          queryClient.setQueryData<RoundResult[]>(["round-results"], (current = []) => [local, ...current.filter((item) => !(item.session_id === payload.session_id && item.round === payload.round))].slice(0, 500));
+          recordResult.mutate(payload);
+          setWins((current) => { const next = { ...current, [winner]: current[winner] + 1 }; localStorage.setItem("planalto-wins", JSON.stringify(next)); return next; });
+        }
       },
       onFatalityComplete: () => {
         const reset = { lula: 0, flavio: 0 };
@@ -192,6 +227,7 @@ export default function Home() {
   const goalPct = Math.min(100, Math.round((giftsThisFight / goal) * 100));
   const hp = hud?.hp ?? { lula: liveConfig.combat.max_hp, flavio: liveConfig.combat.max_hp };
   const history = useMemo(() => (eventQuery.data ?? []).slice(0, 12), [eventQuery.data]);
+  const roundHistory = useMemo(() => resultsQuery.data ?? readRoundHistory(), [resultsQuery.data, roundCredits]);
 
   const toggleSound = () => setSoundOn((current) => { const next = !current; localStorage.setItem("planalto-sound", next ? "on" : "off"); return next; });
   const simulate = (payload: DemoGiftCreate) => demoGift.mutate(payload);
@@ -253,12 +289,12 @@ export default function Home() {
                   {fatalityWinner && <em data-testid="fatality-definitivo-banner">FATALITY DEFINITIVO · {CHARACTERS[fatalityWinner].name}</em>}
                 </div>
                 <div className="ultra-dispute-track" data-testid="ultra-special-dispute-bar">
-                  <div className="ultra-team ultra-team-blue"><i style={{ width: `${(ultraScore.flavio / ULTRA_GOAL) * 100}%` }} /></div>
+                  <div className="ultra-team ultra-team-flavio"><i style={{ width: `${(ultraScore.flavio / ULTRA_GOAL) * 100}%` }} /></div>
                   <strong data-testid="ultra-special-vs">VS</strong>
-                  <div className="ultra-team ultra-team-red"><i style={{ width: `${(ultraScore.lula / ULTRA_GOAL) * 100}%` }} /></div>
+                  <div className="ultra-team ultra-team-lula"><i style={{ width: `${(ultraScore.lula / ULTRA_GOAL) * 100}%` }} /></div>
                 </div>
                 <div className="ultra-dispute-scores">
-                  <span data-testid="ultra-blue-score">TIME AZUL <b>{ultraScore.flavio}/{ULTRA_GOAL}</b></span>
+                  <span data-testid="ultra-blue-score">TIME VERDE <b>{ultraScore.flavio}/{ULTRA_GOAL}</b></span>
                   <span data-testid="ultra-red-score"><b>{ultraScore.lula}/{ULTRA_GOAL}</b> TIME VERMELHO</span>
                 </div>
               </div>
@@ -315,6 +351,7 @@ export default function Home() {
         status={status}
         connectionText={connection.text}
         events={history}
+        results={roundHistory}
         stats={hud?.stats ?? EMPTY_STATS}
         saving={saveConfig.isPending}
         onClose={() => setAdminOpen(false)}

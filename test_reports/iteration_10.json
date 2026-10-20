@@ -1,0 +1,67 @@
+{
+  "iteration": 10,
+  "mode": "retest",
+  "summary": "Re-verified backend regression suite, then covered the full round-credits-cutscene acceptance matrix (4 criteria). Criteria 1 and 2 were already covered by pre-existing browser checks, re-run by name; added two new browser checks for the previously-uncovered criteria: empty-state/draw behavior (no gifts + tie) and contributor-list reset on the next round. All new checks pass. One pre-existing check (round-credits-shows-correct-winner-art-for-both-fighters) failed on rerun due to confirmed concurrent external demo-gift traffic hitting the shared demo backend mid-test (verified via /api/live/events timestamps showing gifts from an unrelated session interleaved with this run) -> classified as environmental flakiness, not a product bug.",
+  "passed": 9,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [
+    {
+      "type": "environment_contention",
+      "severity": "low",
+      "detail": "round-credits-shows-correct-winner-art-for-both-fighters failed twice (timeout waiting for round 2's KO cutscene) while /api/live/events showed interleaved demo gifts from username 'demo_viewer' (lion/hammer/universe) sent by another concurrent session against the same shared 'main-arena' demo backend, pausing/delaying this check's own round. Not reproducible as an app defect — re-run this check in isolation (no other agent/session hitting the demo backend) to confirm."
+    }
+  ],
+  "retest_needed": true,
+  "checks": [
+    {
+      "criterion": "GET /api/live/config baseline + v10 catalog regression (backend)",
+      "name": "pytest suite (test_tscheck_*.py, 5 files)",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "cd /app/backend && python -m pytest -q: 10 passed in 0.99s, no failures. Probed http://localhost:8001/api/live/config -> 200 OK before suite."
+    },
+    {
+      "criterion": "A cutscene de vitória cobre toda a composição 9:16 ao fim de uma rodada com vencedor",
+      "name": "round-credits-covers-vertical-composition-and-auto-dismisses",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: round-credits-cutscene bounding box matches vertical-stream-composition's box (within 2px); open-live-admin-button (external header control) stayed visible; cutscene auto-dismissed within the 3-9s window (~6s) after appearing."
+    },
+    {
+      "criterion": "A cutscene mostra vencedor e colaboradores únicos da rodada em ordem",
+      "name": "round-credits-lists-multiple-gifters-in-order",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: Alice gifted first, then Bruno; round-credit-user-1 contained 'tscheck-Alice' and round-credit-user-2 contained 'tscheck-Bruno', in that order."
+    },
+    {
+      "criterion": "A cutscene mostra vencedor correto (winner name/art) por rodada",
+      "name": "round-credits-shows-correct-winner-art-for-both-fighters",
+      "lane": "browser",
+      "status": "flaky",
+      "evidence": "First half (Lula wins, credits-lula class + 'LULA ... VENCEU') passed and screenshotted. Second half (Flavio wins next round) failed twice on rerun waiting for the cutscene; /api/live/events showed concurrent demo_viewer gifts (lion/hammer/universe) arriving mid-test from an unrelated session on the shared demo backend, pausing this run's combat. Queue itself was empty (curl /api/live/queue -> []) both times, ruling out a stuck-queue app bug."
+    },
+    {
+      "criterion": "Rodada sem presentes usa o estado vazio e empates não exibem vencedor",
+      "name": "round-credits-draw-and-empty-state",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "New check: with combat_mode=live + fight_duration_sec=30 (HP never changes), round-result-banner showed 'EMPATE' at timeout and round-credits-cutscene never mounted (toHaveCount(0) held through +1.5s into the break). Next round (combat_mode=normal), KO'ing flavio via admin damage with zero gifts sent showed round-credits-empty = 'SEM COLABORADORES NESTA RODADA' and no round-credit-user-1 node. Config restored to normal/180s afterward for other checks."
+    },
+    {
+      "criterion": "A lista de colaboradores zera na rodada seguinte",
+      "name": "round-credits-contributors-reset-next-round",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "New check: round N gifter 'tscheck-ResetCarla' appeared in round-credit-user-1 and round number was recorded; round N+1 (no new gifts) advanced the round number and showed round-credits-empty = 'SEM COLABORADORES NESTA RODADA' with round-credit-user-1 absent, confirming the previous round's gifter name did not carry over."
+    },
+    {
+      "criterion": "Preview-ingress smoke (public URL wiring)",
+      "name": "start-screen-opens-arena-public",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run against https://play-live-5.preview.emergentagent.com: start-screen -> enter-live-arena-button -> gameplay-screen visible."
+    }
+  ]
+}

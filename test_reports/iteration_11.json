@@ -1,0 +1,109 @@
+{
+  "iteration": 11,
+  "mode": "retest",
+  "summary": "Re-ran the backend regression suite (now 11 passing files) and all pre-existing browser checks by name first, then added artifacts for the v12 acceptance matrix: Xande per-frame scale (existing check re-verified), the three new local audio cues firing at their correct phases, per-gift effect captions on quick buttons + select, the red/green dispute bar identity, backend idempotency of POST/GET /api/live/results, and the ADMIN history showing a single de-duplicated row per session+round after sync. One pre-existing check (round-credits-shows-correct-winner-art-for-both-fighters) failed twice on rerun purely on timing for round 2's KO; config/queue cross-checks show the app itself is healthy (combat_mode=normal, allow_finisher=false as expected, queue empty) matching the same shared-demo-backend contention pattern already documented in iteration_10 -> classified as environmental flakiness, not a product bug.",
+  "passed": 12,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [
+    {
+      "type": "environment_contention",
+      "severity": "low",
+      "detail": "round-credits-shows-correct-winner-art-for-both-fighters failed on both attempts this iteration waiting (60s then 90s) for round 2's KO/cutscene after driving lula to 1 HP via admin-damage-lula-button. GET /api/live/config confirmed combat_mode=normal, allow_finisher=false, fight_duration_sec=180 (correct/expected state) and GET /api/live/queue was empty both times, ruling out a stuck-queue or config-regression app bug. The first half of the same check (lula wins round 1) passed both times, isolating the slowdown to round 2 specifically, consistent with this check's own in-script note about unrelated concurrent demo_viewer/tscheck_user gift traffic on the shared 'main-arena' backend (confirmed present in /api/live/events during this run) delaying AI auto-combat from landing the final hit. Re-run this check in isolation (no other agent/session hitting the shared demo backend) to confirm it is purely contention. Criterion 7 (victory cutscene correctness in general) remains independently covered and passing via round-credits-covers-vertical-composition-and-auto-dismisses, round-credits-lists-multiple-gifters-in-order, round-credits-draw-and-empty-state and round-credits-contributors-reset-next-round."
+    }
+  ],
+  "retest_needed": true,
+  "checks": [
+    {
+      "criterion": "Backend regression (GET /api/live/config catalog + combat settings + v9/v10 behavior)",
+      "name": "pytest suite (test_tscheck_*.py, 6 files incl. new round-results test)",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "cd /app/backend && python -m pytest -q: 11 passed in 1.06s, no failures. Probed http://localhost:8001/api/live/config -> 200 OK before the suite."
+    },
+    {
+      "criterion": "Toda vitória e derrota de rodada é persistida sem limitar o loop",
+      "name": "test_tscheck_round_results_idempotent.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/live/results with (game_id=main-arena, session_id=tscheck-results-<uuid>, round=1) -> 200, stores winner=lula/gifts_count=2. Repeating the SAME game_id+session_id+round with a different body (winner=flavio, gifts_count=99) -> 200 but returns the ORIGINAL row (same id, winner still lula, gifts_count still 2), proving idempotency. GET /api/live/results lists exactly one row for that id. POSTing round=2 for the same session -> 200 with a new distinct id, proving the round loop is not limited."
+    },
+    {
+      "criterion": "Xande mantém escala proporcional aos lutadores em todos os quadros da Invocação do Xande",
+      "name": "hammer-invocadores-xande-sprite-clean",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run by name: cinematic screenshot captured mid-sequence shows Xande's body at fighter scale with no duplicated limbs/crop fragments across the emerge/strike frames."
+    },
+    {
+      "criterion": "Os três novos áudios locais disparam nas fases pedidas e respeitam volume/mudo",
+      "name": "new-local-audio-assets-load-at-correct-phases",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Network capture: gift-success.mp3 requested while thanks-cutscene was visible; sending 6 donut gifts caused at least one of flashbang.mp3/faah.mp3/special-impact-3.mp3 to be requested (rotation active); victory.mp3 requested while round-credits-cutscene was visible after a finisher-assisted KO. No audio asset returned >=400. Restored combat-finisher-select to off afterward."
+    },
+    {
+      "criterion": "Cada presente disponível mostra sua especial/efeito abaixo do nome",
+      "name": "quick-gift-buttons-show-effect-captions",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "All 7 catalogue gifts (rose, heart, donut, lion, universe, hammer, galaxy) have a visible quick-gift-{id}-button with a non-empty quick-gift-{id}-caption; simulate-gift-select options all contain a 'presente — ação' style dash-separated label. No console errors."
+    },
+    {
+      "criterion": "A barra de disputa identifica Lula vermelho e Flávio verde",
+      "name": "dispute-bar-lula-red-flavio-green",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "ultra-blue-score label reads 'TIME VERDE'; computed backgroundImage of .ultra-team-flavio i matches green rgb stops (57,255,20 / 0,120,58 / 217,255,101) and .ultra-team-lula i matches red/orange rgb stops (255,45,26 / 255,0,110 / 255,138,61)."
+    },
+    {
+      "criterion": "O ADMIN exibe o histórico persistido sem duplicar a cópia local após sincronização",
+      "name": "admin-history-shows-single-row-after-sync",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Captured the session's own POST /api/live/results response (server-assigned id, winner=lula/loser=flavio). round-results-list shows exactly 1 row for that server id and 0 rows for the local-<session>-<round> placeholder id, with text containing 'LULA venceu FLAVIO' and the correct gifts_count. Used combat-finisher-select=on + one donut gift for a deterministic KO per the documented 1-HP admin-damage clamp, then restored finisher to off."
+    },
+    {
+      "criterion": "A cutscene de vitória e colaboradores continua correta após as mudanças",
+      "name": "round-credits-covers-vertical-composition-and-auto-dismisses",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run by name: cutscene bounding box matched vertical-stream-composition's box; external header control stayed visible; auto-dismissed within the expected window."
+    },
+    {
+      "criterion": "A cutscene de vitória e colaboradores continua correta após as mudanças",
+      "name": "round-credits-lists-multiple-gifters-in-order",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run by name: Alice then Bruno gifted; round-credit-user-1/2 contained their names in that order."
+    },
+    {
+      "criterion": "A cutscene de vitória e colaboradores continua correta após as mudanças",
+      "name": "round-credits-draw-and-empty-state",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run by name: tie round showed EMPATE with no round-credits-cutscene; next round KO with zero gifts showed round-credits-empty = 'SEM COLABORADORES NESTA RODADA'."
+    },
+    {
+      "criterion": "A cutscene de vitória e colaboradores continua correta após as mudanças",
+      "name": "round-credits-contributors-reset-next-round",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run by name: round N gifter appeared in credits; round N+1 (no gifts) showed the empty state, confirming contributors reset."
+    },
+    {
+      "criterion": "A cutscene de vitória e colaboradores continua correta após as mudanças",
+      "name": "round-credits-shows-correct-winner-art-for-both-fighters",
+      "lane": "browser",
+      "status": "flaky",
+      "evidence": "First half (Lula wins round 1, credits-lula class + 'LULA ... VENCEU') passed on both attempts. Second half (Flavio wins round 2) timed out twice (60s then 90s); GET /api/live/config showed combat_mode=normal/allow_finisher=false (expected) and GET /api/live/queue was empty both times, ruling out a stuck-queue or config bug. See action_items for the environment-contention evidence."
+    },
+    {
+      "criterion": "Preview-ingress smoke (public URL wiring)",
+      "name": "start-screen-opens-arena-public",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run against https://play-live-5.preview.emergentagent.com: start-screen -> enter-live-arena-button -> gameplay-screen visible."
+    }
+  ]
+}

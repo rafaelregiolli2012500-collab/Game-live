@@ -16,6 +16,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 from lib.db import client, db, ensure_indexes
 from routers.live import router as live_router
+from routers.results import router as results_router
 from routers.scores import router as scores_router
 
 
@@ -60,6 +61,7 @@ async def get_status_checks() -> list[StatusCheck]:
 
 api_router.include_router(scores_router)
 api_router.include_router(live_router)
+api_router.include_router(results_router)
 
 app.add_middleware(
     CORSMiddleware,

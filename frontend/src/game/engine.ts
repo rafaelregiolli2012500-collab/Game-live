@@ -82,6 +82,7 @@ export class ArenaEngine {
   setVolume(volume: number) { this.volume = volume; if (volume > 0) { this.startMusic(); if (this.musicGain) this.musicGain.gain.value = volume * 0.026; } else this.stopMusic(); }
   setPaused(paused: boolean) { this.paused = paused; }
   notifyGift(speed = 1) { this.playHit(0.4, undefined, "gift-alert", speed); }
+  notifyVictory() { this.playHit(1, undefined, "victory", 1); }
 
   private ensureAudio() {
     this.audio ??= new AudioContext();
@@ -102,7 +103,8 @@ export class ArenaEngine {
 
   private playHit(power: number, fighter?: CharacterId, cue: SoundCue = "basic-punch", speed = 1) {
     if (this.volume <= 0) return;
-    if (cue === "gift-alert") { this.playGiftAlert(speed); return; }
+    if (cue === "gift-alert") { this.playClip(SOUND_FILES.giftSuccess, this.volume * 0.72, 2200, speed, power); return; }
+    if (cue === "victory") { this.playClip(SOUND_FILES.victory, this.volume * 0.9, 4800, 1, power); return; }
     if (cue === "ultra-charge") { this.playClip(SOUND_FILES.animePowerup, this.volume * 0.72, 4300, speed, power); return; }
     if (cue === "ultra-wave") { this.playClip(SOUND_FILES.strongEnergyWave, this.volume * 0.9, 3500, speed, power); return; }
     if (cue === "genkidama-charge") { this.playClip(SOUND_FILES.genkidamaCharge, this.volume * 0.82, 4400, speed, power); return; }
@@ -120,7 +122,8 @@ export class ArenaEngine {
       return;
     }
     if (cue === "special-impact") {
-      this.playClip([SOUND_FILES.flashbang, SOUND_FILES.faah][this.strongSound++ % 2], this.volume * 0.72, 1500, speed, power);
+      const impacts = [SOUND_FILES.flashbang, SOUND_FILES.faah, SOUND_FILES.specialImpactThree] as const;
+      this.playClip(impacts[this.strongSound++ % impacts.length], this.volume * 0.72, 1800, speed, power);
       return;
     }
     if (cue === "basic-punch") {
@@ -130,25 +133,6 @@ export class ArenaEngine {
     }
     // Kicks keep the single punch/impact sample; only punches alternate.
     this.playClip(SOUND_FILES.punch, this.volume * 0.55, 650, 1, power);
-  }
-
-  private playGiftAlert(speed: number) {
-    try {
-      const audio = this.ensureAudio();
-      void audio.resume();
-      [660, 990].forEach((frequency, index) => {
-        const oscillator = audio.createOscillator();
-        const gain = audio.createGain();
-        const at = audio.currentTime + index * 0.07 / speed;
-        oscillator.type = "square";
-        oscillator.frequency.value = frequency;
-        gain.gain.setValueAtTime(this.volume * 0.055, at);
-        gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.1 / speed);
-        oscillator.connect(gain).connect(audio.destination);
-        oscillator.start(at);
-        oscillator.stop(at + 0.11 / speed);
-      });
-    } catch { /* notification is best effort */ }
   }
 
   private startMusic() {

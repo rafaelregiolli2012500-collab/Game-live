@@ -58,6 +58,9 @@ export const SOUND_FILES = {
   genkidamaImpact: "/audio/genkidama-impact.mp3",
   lulaSpecialAlt: "/audio/lula-special-alt.mp3",
   flavioSpecial: "/audio/flavio-special.mp3",
+  specialImpactThree: "/audio/special-impact-3.mp3",
+  victory: "/audio/victory.mp3",
+  giftSuccess: "/audio/gift-success.mp3",
 } as const;
 
 /** Domain expansion per fighter (from the user's domain catalogue). */

@@ -95,6 +95,21 @@ export interface LiveStatus {
   message: string;
 }
 
+export interface RoundResultCreate {
+  game_id: string;
+  session_id: string;
+  round: number;
+  winner: CharacterId;
+  loser: CharacterId;
+  contributors: string[];
+  gifts_count: number;
+}
+
+export interface RoundResult extends RoundResultCreate {
+  id: string;
+  created_at: string;
+}
+
 export interface GiftSocketStatus extends LiveStatus {
   type: "status";
 }
@@ -112,6 +127,8 @@ export const sendDemoGift = (payload: DemoGiftCreate) => apiPost<GiftEvent>("/li
 export const fetchLiveStatus = () => apiGet<LiveStatus>("/live/status");
 export const fetchLiveEvents = () => apiGet<GiftEvent[]>("/live/events");
 export const fetchLiveQueue = () => apiGet<GiftEvent[]>("/live/queue");
+export const fetchRoundResults = () => apiGet<RoundResult[]>("/live/results");
+export const saveRoundResult = (payload: RoundResultCreate) => apiPost<RoundResult>("/live/results", payload);
 
 export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   id: "default",

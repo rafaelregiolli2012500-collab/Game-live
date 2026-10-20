@@ -1,0 +1,19 @@
+{
+  "iteration": 12,
+  "mode": "retest",
+  "summary": "Rewrote only the unstable strategy of the persisted browser check round-credits-shows-correct-winner-art-for-both-fighters (no app code touched). The old script waited on AI auto-combat to land the final KO hit, which was flaky under shared-demo-backend contention (see iteration_11). New strategy: enable combat-finisher-select=on, bring the target to 1 HP via the ADMIN damage buttons (confirmed via frontend/src/game/damage.ts that adminAdjust clamps to a floor of 1 HP, matching the briefing's seed fact), then send a deterministic donut/Shoryuken gift benefiting the attacker to land the final point of damage via the gift-finisher path (damage.ts only clamps gift damage short of KO when allow_finisher is false). Also discovered and fixed a second real timing hazard while iterating: the round-credits cutscene can hide before the engine's internal ROUND_BREAK_SEC (7s) round-reset timer elapses, during which the combat loop ignores all further damage/gifts (processSpecials() short-circuits while roundOverAt !== null) - added a wait for the HUD's broadcast-round-label to read 'ROUND 02' before driving round 2, which eliminated the remaining failure. allow_finisher is restored to off and saved at the end of the check, matching the original config (confirmed False via GET /api/live/config after the run), and GET /api/live/queue is empty. Passed twice in a row (determinism confirmed, not just a flaky rerun pass). Per seed_facts this iteration only re-targets this one criterion/check; the rest of the v11 suite (12 other checks + 11 backend tests) was left untouched as explicitly scoped by the briefing.",
+  "passed": 1,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "A arte e o nome da cutscene correspondem corretamente ao vencedor em rodadas consecutivas para os dois lutadores",
+      "name": "round-credits-shows-correct-winner-art-for-both-fighters",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Rewritten to a deterministic finisher flow instead of waiting on AI auto-combat: set combat-finisher-select=on + save, drove flavio to 1 HP via admin-damage-flavio-button x20, sent a donut gift benefiting lula -> round-credits-cutscene showed class credits-lula and winner-name 'LULA ... VENCEU', round label 'ROUND 01'. Waited for broadcast-round-label to read 'ROUND 02' (engine's round-break timer, which can outlast the cutscene's own visible duration) before round 2: drove lula to 1 HP via admin-damage-lula-button x20, sent a donut gift benefiting flavio -> cutscene showed class credits-flavio and winner-name 'FLÁVIO ... VENCEU', round label changed from round 1's value. Restored combat-finisher-select=off and saved; GET /api/live/config afterward confirmed allow_finisher=false/combat_mode=normal (original state) and GET /api/live/queue was empty. Passed on two consecutive re-runs, confirming determinism (not a flaky pass)."
+    }
+  ]
+}

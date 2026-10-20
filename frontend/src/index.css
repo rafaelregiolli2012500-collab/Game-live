@@ -144,7 +144,8 @@
 .check-connection-button { justify-self: start; margin-top: 6px; padding: 6px 10px; border: 1px solid rgba(255,230,0,.4); border-radius: 6px; color: #ffe600; background: transparent; font: 800 9px "Geist Mono Variable", monospace; transition: background .2s; }
 .check-connection-button:hover { background: rgba(255,230,0,.1); }
 .quick-gifts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.quick-gifts button { padding: 7px 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 7px; color: #fff; background: rgba(255,255,255,.06); font: 800 10px "Geist Mono Variable", monospace; transition: transform .15s, border-color .2s; }
+.quick-gifts button { display: flex; width: auto; min-width: 112px; flex: 1 1 118px; flex-direction: column; align-items: flex-start; gap: 3px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 7px; color: #fff; background: rgba(255,255,255,.06); font: 800 10px "Geist Mono Variable", monospace; text-align: left; transition: transform .15s, border-color .2s; }
+.quick-gifts button small { color: #fbbf24; font: 700 7px "IBM Plex Mono", monospace; line-height: 1.25; letter-spacing: .04em; }
 .quick-gifts button:hover { transform: translateY(-1px); border-color: #ff006e; }
 .quick-gifts button:active { transform: scale(.96); }
 .combat-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -229,10 +230,10 @@
 .ultra-dispute-track > strong { display: grid; height: 100%; place-items: center; color: #ffe600; background: #11131e; font: 900 6px "Geist Mono Variable", monospace; }
 .ultra-team { display: flex; height: 100%; background: rgba(255,255,255,.05); }
 .ultra-team i { display: block; height: 100%; transition: width .35s cubic-bezier(.2,.9,.3,1); }
-.ultra-team-blue { justify-content: flex-end; }
-.ultra-team-blue i { background: linear-gradient(90deg, #00783a, #39ff14, #ffe600); box-shadow: 0 0 9px rgba(57,255,20,.7); }
-.ultra-team-red { justify-content: flex-start; }
-.ultra-team-red i { background: linear-gradient(90deg, #ff8a3d, #ff2d1a, #ff006e); box-shadow: 0 0 9px rgba(255,45,26,.75); }
+.ultra-team-flavio { justify-content: flex-end; }
+.ultra-team-flavio i { background: linear-gradient(90deg, #00783a, #39ff14, #d9ff65); box-shadow: 0 0 9px rgba(57,255,20,.7); }
+.ultra-team-lula { justify-content: flex-start; }
+.ultra-team-lula i { background: linear-gradient(90deg, #ff8a3d, #ff2d1a, #ff006e); box-shadow: 0 0 9px rgba(255,45,26,.75); }
 .ultra-dispute-scores { display: flex; justify-content: space-between; color: #91a0b6; font: 800 6px "Geist Mono Variable", monospace; letter-spacing: .06em; }
 .ultra-dispute-scores b { color: #fff; font-size: 7px; }
 .ultra-dispute.is-fatality .ultra-dispute-track { border-color: #ffe600; box-shadow: 0 0 15px rgba(255,230,0,.7); }

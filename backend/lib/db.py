@@ -29,6 +29,10 @@ INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("game_id", ASCENDING), ("sequence", ASCENDING)], name="game_sequence", unique=True),
         IndexModel([("game_id", ASCENDING), ("status", ASCENDING), ("sequence", ASCENDING)], name="game_status_sequence"),
     ],
+    "round_results": [
+        IndexModel([("game_id", ASCENDING), ("session_id", ASCENDING), ("round", ASCENDING)], name="game_session_round", unique=True),
+        IndexModel([("created_at", DESCENDING)], name="created_at_desc"),
+    ],
 }
 
 
