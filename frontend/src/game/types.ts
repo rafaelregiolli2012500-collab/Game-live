@@ -41,6 +41,8 @@ export interface Fighter {
   stateDuration: number;
   move: BasicMove | null;
   moveTime: number;
+  /** Per-special playback multiplier (2× for repeated gifts from the same sender). */
+  moveSpeed: number;
   impactsDone: number;
   attackId: number;
   combo: BasicMove[];
@@ -55,7 +57,7 @@ export interface Fighter {
   invuln: number;
   grabPartner: Fighter | null;
   /** Gift special in progress: damage carried by the energy ball once released. */
-  special: { kind: GiftAttackKind; damage: number; username: string } | null;
+  special: { kind: GiftAttackKind; damage: number; username: string; speed: number } | null;
   /** Gift buffs (percent + seconds left); both reset when a new round starts. */
   dmgBoost: Boost;
   defBoost: Boost;
@@ -94,6 +96,7 @@ export interface EngineCallbacks {
   onRoundEnd: (winner: CharacterId | null, round: number) => void;
   onRoundStart: (round: number) => void;
   onFatalityComplete: (winner: CharacterId) => void;
+  onSpecialComplete: (eventId: string) => void;
 }
 
 export interface HudSnapshot {

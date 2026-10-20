@@ -159,6 +159,11 @@
 @keyframes fatality-blink { 0%, 100% { opacity: 1; filter: brightness(1); } 45% { opacity: .42; filter: brightness(1.8); } }
 .thanks-cutscene { position: absolute; inset: 0; z-index: 6; overflow: hidden; background: #05060a; animation: thanks-in .42s cubic-bezier(.2,.9,.3,1) both; pointer-events: none; }
 .thanks-cutscene.is-leaving { animation: thanks-out .38s ease forwards; }
+.thanks-cutscene.is-fast { animation-duration: .21s; }
+.thanks-cutscene.is-fast.is-leaving { animation-duration: .19s; }
+.thanks-cutscene.is-fast .thanks-art { animation-duration: 1.6s; }
+.thanks-cutscene.is-fast .thanks-copy > * { animation-duration: .225s; }
+.thanks-cutscene.is-fast .thanks-user { animation-duration: .225s, .6s !important; }
 .thanks-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 30% 35%; image-rendering: pixelated; animation: thanks-zoom 3.2s ease-out both; }
 .thanks-shade { position: absolute; inset: 0; background: linear-gradient(90deg, transparent 30%, rgba(5,6,10,.55) 58%, rgba(5,6,10,.88)); }
 .thanks-bar { position: absolute; left: 0; right: 0; height: 9%; background: #000; animation: thanks-bar .3s ease both; }

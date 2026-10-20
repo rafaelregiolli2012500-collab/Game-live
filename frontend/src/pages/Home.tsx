@@ -55,17 +55,29 @@ export default function Home() {
   const [recent, setRecent] = useState<GiftEvent[]>([]);
   const [giftsThisFight, setGiftsThisFight] = useState(0);
   const [captions, setCaptions] = useState<GiftEvent[]>([]);
+  const [captionSpeed, setCaptionSpeed] = useState(1);
   const [roundResult, setRoundResult] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<ArenaEngine | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
-  const pendingRef = useRef<GiftEvent[]>([]);
+  const giftQueueRef = useRef<GiftEvent[]>([]);
+  const activeGiftRef = useRef<GiftEvent | null>(null);
+  const giftSpeedRef = useRef<Map<string, number>>(new Map());
   const ultraScoreRef = useRef<UltraScore>(ultraScore);
   const fatalityLockRef = useRef(false);
   const fatalityEventsRef = useRef<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const right: CharacterId = left === "lula" ? "flavio" : "lula";
   const { events: socketEvents, status: socketStatus } = useGiftSocket("main-arena");
+
+  const beginNextGift = useCallback(() => {
+    if (activeGiftRef.current || giftQueueRef.current.length === 0) return;
+    const event = giftQueueRef.current.shift()!;
+    activeGiftRef.current = event;
+    const speed = giftSpeedRef.current.get(event.id) ?? 1;
+    setCaptionSpeed(speed);
+    setCaptions([event]);
+  }, []);
 
   const configQuery = useQuery({ queryKey: ["live-config"], queryFn: fetchLiveConfig, retry: false, staleTime: 30_000 });
   const eventQuery = useQuery({ queryKey: ["live-events"], queryFn: fetchLiveEvents, retry: false, staleTime: 10_000 });
@@ -80,8 +92,12 @@ export default function Home() {
   const receiveGift = useCallback((event: GiftEvent) => {
     if (seenRef.current.has(event.event_id)) return;
     seenRef.current.add(event.event_id);
-    // The thank-you cutscene plays first; its effect fires when the cutscene ends (applyGift).
-    setCaptions((current) => [...current, event]);
+    // Strict pipeline: cutscene → its complete effect → next cutscene. Repeated gifts run at 2×.
+    const previous = giftQueueRef.current.at(-1) ?? activeGiftRef.current;
+    const speed = event.quantity > 1 || previous?.username === event.username ? 2 : 1;
+    giftSpeedRef.current.set(event.id, speed);
+    giftQueueRef.current.push(event);
+    beginNextGift();
     setLastGift(event);
     setRecent((current) => [event, ...current.filter((item) => item.event_id !== event.event_id)].slice(0, 5));
     setGiftsThisFight((count) => count + event.quantity);
@@ -98,7 +114,7 @@ export default function Home() {
         setFatalityWinner(id);
       }
     }
-  }, []);
+  }, [beginNextGift]);
 
   useEffect(() => { [...socketEvents].reverse().forEach(receiveGift); }, [socketEvents, receiveGift]);
 
@@ -106,12 +122,12 @@ export default function Home() {
   const applyGift = useCallback((event: GiftEvent) => {
     setCaptions((current) => current.filter((item) => item.id !== event.id));
     const fatality = fatalityEventsRef.current.has(event.id);
+    const speed = giftSpeedRef.current.get(event.id) ?? 1;
     if (engineRef.current) {
       fatalityEventsRef.current.delete(event.id);
-      if (fatality) engineRef.current.triggerFatality(event.benefited_character, event.username);
-      else engineRef.current.triggerSpecial(event);
+      if (fatality) engineRef.current.triggerFatality(event.benefited_character, event.username, event.id, speed);
+      else engineRef.current.triggerSpecial(event, speed);
     }
-    else pendingRef.current.push(event);
   }, []);
 
   useEffect(() => {
@@ -134,12 +150,14 @@ export default function Home() {
         setUltraScore(reset);
         localStorage.setItem("planalto-ultra-dispute", JSON.stringify(reset));
       },
+      onSpecialComplete: (eventId) => {
+        if (activeGiftRef.current?.id !== eventId) return;
+        activeGiftRef.current = null;
+        giftSpeedRef.current.delete(eventId);
+        window.setTimeout(beginNextGift, 0);
+      },
     });
     engineRef.current = engine;
-    pendingRef.current.splice(0).forEach((event) => {
-      if (fatalityEventsRef.current.delete(event.id)) engine.triggerFatality(event.benefited_character, event.username);
-      else engine.triggerSpecial(event);
-    });
     return () => { engine.destroy(); engineRef.current = null; };
     // Settings are pushed via setSettings; only fighters/screen recreate the engine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +255,7 @@ export default function Home() {
             <div className="arcade-frame">
               <div className="canvas-wrap">
                 <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} data-testid="game-canvas" />
-                <GiftCaptions captions={captions} durationMs={liveConfig.combat.caption_ms} onDone={applyGift} />
+                <GiftCaptions captions={captions} durationMs={liveConfig.combat.caption_ms} speed={captionSpeed} backlog={giftQueueRef.current.length} onDone={applyGift} />
                 {roundResult && <div className="round-result" data-testid="round-result-banner">{roundResult}</div>}
               </div>
               <div className="hud-strip">

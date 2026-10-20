@@ -33,17 +33,18 @@ export interface Domain {
   /** Finisher energy ball position (world x), null when not in flight. */
   ballX: number | null;
   homeX: number;
+  speed: number;
 }
 
 const seg = (t: number, a: number, b: number) => Math.max(0, Math.min(1, (t - a) / (b - a)));
 
-export function startDomain(attacker: Fighter, victim: Fighter, damage: number): Domain {
+export function startDomain(attacker: Fighter, victim: Fighter, damage: number, speed = 1): Domain {
   [attacker, victim].forEach((f) => { f.combo = []; f.grabPartner = null; f.vx = 0; f.vy = 0; f.y = 0; f.special = null; });
   setState(attacker, "domain");
   setState(victim, "frozen");
   attacker.facing = victim.x >= attacker.x ? 1 : -1;
   victim.facing = (attacker.facing === 1 ? -1 : 1) as 1 | -1;
-  return { attacker, victim, t: 0, damage, strikes: COMBO.map((s) => ({ ...s, done: false })), lastStrike: -10, finished: false, ballX: null, homeX: attacker.x };
+  return { attacker, victim, t: 0, damage, strikes: COMBO.map((s) => ({ ...s, done: false })), lastStrike: -10, finished: false, ballX: null, homeX: attacker.x, speed };
 }
 
 /** 0..1 visual size of the domain (expansion → hold → collapse). */
@@ -51,7 +52,8 @@ export const domainScale = (d: Domain) => seg(d.t, 0.55, 1.6) * (1 - seg(d.t, 5.
 
 /** Advances the domain. Returns true when it is over. */
 export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean {
-  d.t += dt;
+  const step = dt * d.speed;
+  d.t += step;
   const { attacker: a, victim: v, t } = d;
   const colors = SPECIAL_COLORS[a.id].sparks;
   a.facing = v.x >= a.x ? 1 : -1;
@@ -75,7 +77,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
     a.pose = t < 0.15 ? "idle" : "mudra";
     a.squash = 1 - 0.015 * Math.sin(t * 22);
     if (t > 0.3 && t < 1.5 && Math.random() < 0.8) burst(ctx.fx, a.x + (Math.random() - 0.5) * 140, GROUND_Y - Math.random() * 240, colors, 2, 90, -240);
-    if (t > 1.5 && t - dt <= 1.5) { flash(ctx.fx, 0.5, colors[0]); shake(ctx.camera, 8); ctx.sound(1.8, a.id, "special-start"); }
+    if (t > 1.5 && t - step <= 1.5) { flash(ctx.fx, 0.5, colors[0]); shake(ctx.camera, 8); ctx.sound(1.8, a.id, "special-start", d.speed); }
   } else if (t < 4.6) {
     // Dash next to the frozen opponent, then chain the super combo.
     const target = v.x - a.facing * 96;
@@ -91,7 +93,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
       burst(ctx.fx, v.x - a.facing * 20, hy, colors, 14, 300);
       ring(ctx.fx, v.x - a.facing * 20, hy, colors[0], 1);
       shake(ctx.camera, 6);
-      ctx.sound(1.1, a.id, "special-impact");
+      ctx.sound(1.1, a.id, "special-impact", d.speed);
       v.flash = 0.12;
       applyDamage(ctx.settings, { attacker: a, target: v, amount: per, source: "gift", outcome: "hit" });
     }
@@ -107,7 +109,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
     a.ox = t < 5.55 ? 10 : 0;
     if (d.ballX === null && !d.finished) { d.ballX = a.x + a.facing * 104; }
     if (d.ballX !== null) {
-      d.ballX += a.facing * 900 * dt;
+      d.ballX += a.facing * 900 * step;
       if (Math.random() < 0.9) burst(ctx.fx, d.ballX - a.facing * 30, GROUND_Y - 140, colors, 2, 80, 0);
       if (t >= FINISH_IMPACT || Math.sign(v.x - d.ballX) !== a.facing) {
         d.ballX = null;
@@ -119,7 +121,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
         ring(ctx.fx, v.x, GROUND_Y - 140, colors[0], 2);
         flash(ctx.fx, 0.6, colors[0]);
         shake(ctx.camera, 14);
-        ctx.sound(2, a.id, "special-impact");
+        ctx.sound(2, a.id, "special-impact", d.speed);
       }
     }
   } else {

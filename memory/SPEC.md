@@ -61,3 +61,9 @@ The public `/sprites` directory contains the reference stage, character sprites 
 ## v7 — Slower combat and special-only heavy audio
 - Ordinary move animation speed defaults to 0.85 (15% slower) and AI attack frequency to 1.12 (20% below the previous 1.4); scripted gift specials and Domain cinematics keep their original timing. Backend config migration `rules_version: 6` applies these values to existing arenas once.
 - Audio cues are phase-specific: basic punch/kick contact uses only `punch.mp3`; `flashbang.mp3` and `faah.mp3` alternate only when a gift special actually deals damage; `lula-special.mp3` plays once at the start of Lula's special.
+
+## v8 — Supplied Super Hadouken sprite, charge aura and strict gift pipeline
+- Supplied assets are bundled as `/sprites/ultra_beam_sheet.png` and `/sprites/ultra_aura.png`. Ultra/Fatality uses a cropped large beam frame recoloured at render time (white core preserved): Lula red, Flávio green/yellow. The aura sprite surrounds only the charging/firing fighter and disappears after release.
+- Gift processing is strictly serialized: cutscene 1 → complete effect/special 1 → cutscene 2 → complete effect/special 2. `ArenaEngine.onSpecialComplete(eventId)` advances the browser queue only when all repeated units, projectiles or Domain animation for that event are finished.
+- Quantity >1 or consecutive gifts from the same username use 2× cutscene, special movement/projectile and audio playback while retaining the original quantity and damage per unit.
+- Audio files are decoded into Web Audio buffers before impact where possible; scheduled playback starts on the exact release/impact frame and uses the same per-gift playback rate to avoid lag.

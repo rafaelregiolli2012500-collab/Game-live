@@ -46,6 +46,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, 
   ctx.beginPath();
   ctx.ellipse(f.x, GROUND_Y + 4, (f.pose === "knockdown" ? 90 : 62) * Math.max(0.55, 1 - lift / 400), 11, 0, 0, Math.PI * 2);
   ctx.fill();
+  drawUltraAura(ctx, images, f, x, y, time);
   drawAura(ctx, f, x, y, time);
   if (f.move === "shoryuken") drawShoryuken(ctx, f, x, y, time);
   ctx.save();
@@ -68,6 +69,25 @@ function drawFighter(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, 
       ctx.fillRect(x + Math.cos(a) * 34 - 4, y - 262 + Math.sin(a) * 9, 8, 8);
     }
   }
+}
+
+/** Supplied pixel aura, visible only while the Ultra/Fatality is charging and leaving the hands. */
+function drawUltraAura(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, x: number, y: number, time: number) {
+  if (f.move !== "ultra_hadouken" || f.moveTime > ULTRA_RELEASE + 0.08) return;
+  const img = images[FX_SPRITES.ultraAura];
+  if (!ready(img)) return;
+  const pulse = 1 + Math.sin(time * 18) * 0.045;
+  const w = 235 * pulse;
+  const h = 305 * pulse;
+  ctx.save();
+  ctx.globalAlpha = 0.78;
+  ctx.globalCompositeOperation = "lighter";
+  // Source aura is magenta: +60° reaches red, +180° reaches green while preserving its yellow highlights.
+  ctx.filter = f.id === "lula" ? "hue-rotate(60deg) saturate(1.65)" : "hue-rotate(180deg) saturate(1.7) brightness(1.08)";
+  ctx.shadowColor = f.id === "lula" ? "#ff2d1a" : "#39ff14";
+  ctx.shadowBlur = 24;
+  ctx.drawImage(img, x - w / 2, y - h + 8, w, h);
+  ctx.restore();
 }
 
 /** Vertical flame/trail around the five-stage Shoryuken movement. */
@@ -241,6 +261,29 @@ function drawOrb(ctx: CanvasRenderingContext2D, id: Fighter["id"], x: number, y:
   ctx.restore();
 }
 
+/** Large supplied beam frame; its blue shell is recoloured while its white core stays white. */
+function drawUltraBeam(ctx: CanvasRenderingContext2D, images: Images, p: Projectile, time: number) {
+  const img = images[FX_SPRITES.ultraBeam];
+  if (!ready(img)) {
+    drawOrb(ctx, p.owner.id, p.x, p.y, p.kind === "fatality" ? 112 : 72, Math.sign(p.vx), 1.8, time, true);
+    return;
+  }
+  const fatality = p.kind === "fatality";
+  const pulse = 1 + Math.sin((time + p.age) * 30) * 0.035;
+  const w = (fatality ? 440 : 330) * pulse;
+  const h = (fatality ? 176 : 132) * pulse;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(Math.sign(p.vx), 1);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.filter = p.owner.id === "lula" ? "hue-rotate(120deg) saturate(1.7)" : "hue-rotate(-120deg) saturate(1.8) brightness(1.08)";
+  ctx.shadowColor = p.owner.id === "lula" ? "#ff2d1a" : "#39ff14";
+  ctx.shadowBlur = fatality ? 42 : 28;
+  // Cropped from the clean long-beam frame in the supplied 631×1024 spritesheet.
+  ctx.drawImage(img, 12, 351, 306, 126, -w * 0.48, -h / 2, w, h);
+  ctx.restore();
+}
+
 /** Energy gathering between the hands while charging the hadouken. */
 function drawCharge(ctx: CanvasRenderingContext2D, f: Fighter, time: number) {
   if (f.move !== "hadouken" && f.move !== "ultra_hadouken") return;
@@ -278,7 +321,10 @@ export function render(ctx: CanvasRenderingContext2D, images: Images, s: RenderS
   s.fighters.forEach((f) => drawCharge(ctx, f, s.time));
   if (s.domain && s.domain.ballX !== null) drawOrb(ctx, s.domain.attacker.id, s.domain.ballX, GROUND_Y - 140, 44, s.domain.attacker.facing, 1, s.time);
   if (s.domain && s.domain.attacker.pose === "charge") drawOrb(ctx, s.domain.attacker.id, s.domain.attacker.x + 46 * s.domain.attacker.facing, GROUND_Y - 100, 24, s.domain.attacker.facing, 0, s.time);
-  s.projectiles.forEach((p) => drawOrb(ctx, p.owner.id, p.x, p.y, p.kind === "fatality" ? 112 : p.kind === "ultra_hadouken" ? 72 : 30, Math.sign(p.vx), p.kind === "hadouken" ? Math.min(1, p.age * 6) : 1.8, s.time + p.age, p.kind !== "hadouken"));
+  s.projectiles.forEach((p) => {
+    if (p.kind === "hadouken") drawOrb(ctx, p.owner.id, p.x, p.y, 30, Math.sign(p.vx), Math.min(1, p.age * 6), s.time + p.age);
+    else drawUltraBeam(ctx, images, p, s.time);
+  });
   drawWorldEffects(ctx, s.fx);
   ctx.restore();
 

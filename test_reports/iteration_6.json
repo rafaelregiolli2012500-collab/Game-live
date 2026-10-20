@@ -1,0 +1,68 @@
+{
+  "iteration": 6,
+  "mode": "generate",
+  "summary": "Covered the v8 acceptance matrix (6 criteria: recoloured Super Hadouken beam per fighter, aura restricted to the charging fighter, strict serialization across different gift events, 2x speed/unit-damage for repeated same-user gifts, playback-rate-locked start/impact audio, and a pause/dispute/Fatality regression with the new queue) with 1 backend test file + 5 new browser checks, plus a reused persisted pause/dispute/Fatality check and the baseline public-ingress check. All 8 artifacts pass.",
+  "passed": 8,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Universo/Fatality usa o sprite fornecido em tamanho destrutivo, recolorido por lutador (sem expor a spritesheet crua)",
+      "name": "test_tscheck_universe_ultra_damage_per_unit (test_universe_gift_reports_240_damage_and_ultra_special_move)",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/live/demo/gift (gift_id=universe, qty=1) -> 200, damage=240, special_move=ultra_hadouken; same gift qty=2 -> 200, damage still 240 per unit (backend never inflates per-unit damage, only quantity). Cross-checked GET /api/live/events contains the created event."
+    },
+    {
+      "criterion": "O Super Hadouken usa o sprite fornecido em tamanho destrutivo e recolorido por lutador",
+      "name": "ultra-beam-recolor-per-fighter-and-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Zero <img src*=ultra_beam_sheet> ever in the DOM (canvas-only, cropped draw). Canvas-average colour bias during the projectile window: redBias=116.3 (Lula) and greenBias=13.3 (Flávio) vs pre-gift baseline, both well above threshold. HP dropped by exactly 240 on each side. Screenshot captured a clearly visible giant green Ultra beam for Flávio."
+    },
+    {
+      "criterion": "A aura fornecida envolve somente quem carrega o Ultra",
+      "name": "ultra-aura-visible-only-during-charge",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Red-hue bias during the 0-900ms charge window peaked at 110.2 vs only 20.9 in the ~3.2-3.9s post-release window (move duration 1.7s), confirming the aura appears while charging and is gone well after release."
+    },
+    {
+      "criterion": "As especiais de eventos diferentes são totalmente serializadas",
+      "name": "different-event-specials-fully-serialized",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Donut(Lula)->userA then Donut(Flávio)->userB queued back to back. userA's cutscene appeared and hid first; Flávio's HP had already dropped by 45 (userA's full Shoryuken completed) before userB's cutscene text appeared; userB's cutscene then hid and Lula's HP dropped by 45. No overlap at any point."
+    },
+    {
+      "criterion": "Várias unidades da mesma pessoa aceleram toda a sequência sem mudar o dano",
+      "name": "same-user-multi-unit-2x-speed-and-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "1x baseline cutscene (data-playback-speed=1) took 2810ms; Universo x2 from the same username showed data-playback-speed=2 and hid in 1318ms (well under half). HP dropped by exactly 480 (240/unit x2) off a fresh 600 HP bar, landing on 120/600 HP as specified."
+    },
+    {
+      "criterion": "O áudio acelerado permanece preso aos quadros de início e impacto",
+      "name": "accelerated-audio-locked-to-start-and-impact",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Patched AudioBufferSourceNode.start/HTMLMediaElement.play to log playbackRate. Universo x2 (Lula) produced exactly 4 buffer-source plays, ALL at rate=2 (2 special-start + 2 special-impact cues for the 2 units); the last rate-2 event landed within 50ms of the confirmed -480 HP read, i.e. on the impact frame with no perceptible lag."
+    },
+    {
+      "criterion": "Pausa, disputa 20/20 e Fatality continuam funcionando com a fila nova",
+      "name": "pause-dispute-fatality-still-working",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran existing persisted check: cutscene froze the timer-display; Heart x19 then x1 more for Lula hit 20/20, fatality-definitivo-banner fired, Flávio's HP went to 0, both ultra-red/blue scores reset to 0/20."
+    },
+    {
+      "criterion": "Baseline regression: arena loads without login on the public ingress",
+      "name": "start-screen-opens-arena",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran against https://live-game-preview-1.preview.emergentagent.com; gameplay-screen visible, no login gate, no console errors."
+    }
+  ]
+}

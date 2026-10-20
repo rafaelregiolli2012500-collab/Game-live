@@ -65,6 +65,8 @@ export const portraitPath = (id: CharacterId) => spritePath(id, "idle");
 
 export const FX_SPRITES = {
   stage: "/sprites/stage.jpg",
+  ultraBeam: "/sprites/ultra_beam_sheet.png",
+  ultraAura: "/sprites/ultra_aura.png",
 } as const;
 
 export function loadImages(): Record<string, HTMLImageElement> {
