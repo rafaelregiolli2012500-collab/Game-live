@@ -49,3 +49,15 @@ The public `/sprites` directory contains the reference stage, character sprites 
 - Boosts: +10% per gift unit to the benefited fighter; damage max +100%, defense max +50% (less damage taken). 2-minute timer, refreshed on each gift, reset at every new round (new fighters). Applied in damage.ts (attacker dmgBoost × target defBoost). Aura on the fighter (orange flame = damage, cyan shield = defense) + chips under the profile (`broadcast-{left|right}-damage-boost` / `-defense-boost`) with countdown.
 - Domain (`game/domain.ts`, 6.6s cinematic, timer/AI paused): mudra pose → domain expands (Lula "ARENA SANGRENTA" red sphere + floor runes; Flávio "FLORESTA TROPICAL" Brazilian flag) → opponent frozen (ice tint + shards) → 9-hit super combo (punches/kicks/uppercut/sweep/airkick) → hadouken finisher → collapse → opponent knocked down.
 - Thank-you cutscene for EVERY gift (`components/live/GiftCaptions.tsx`, testid `thanks-cutscene`): art `/sprites/thanks_lula.jpg` (red flag, white star) / `thanks_flavio.jpg` (Brazil flag), "OBRIGADO, @user!", gift + effect label. The gift effect fires when its cutscene ends (Home.applyGift).
+
+## v6 — Ultra dispute, Shoryuken, giant Ultra and uploaded impact audio
+- Every thank-you cutscene fully pauses timer, AI, combat animation and queued specials; its effect is queued only after the cutscene disappears, then the previous manual pause state is preserved.
+- Persistent localStorage key `planalto-ultra-dispute`: each gift unit gives +1 to its benefited fighter (Lula = red team, Flávio = blue team shown with green fill). Scores persist across normal rounds. First to 20 triggers a priority `FATALITY DEFINITIVO`, guaranteed to reduce the rival to 0 HP; the dispute resets only when that Fatality connects.
+- Top broadcast HUD has `ULTRA ESPECIAL — DISPUTA DE PRESENTES`, live `{score}/20` counters, green vs red bar and a blinking Fatality state.
+- Gift catalogue rules_version 5: Rosquinha (`donut`) now triggers a 45-damage Shoryuken; Leão keeps Domain Expansion; Universo TikTok (`universe`, 44,999) triggers a 240-damage giant Ultra Hadouken. Both new specials are configurable in ADMIN.
+- Shoryuken follows the supplied five-stage reference: crouch → charge → rising uppercut → aerial recovery → landing. Lula energy is red; Flávio energy is green/yellow. Ultra/Fatality uses an oversized full-arena projectile.
+- Uploaded audio mapping: Flashbang/Faah alternate on heavy impacts; Lula meme plays for Lula specials; punch audio plays for normal impacts. Files are served locally from `/audio` and obey the existing volume/mute control.
+
+## v7 — Slower combat and special-only heavy audio
+- Ordinary move animation speed defaults to 0.85 (15% slower) and AI attack frequency to 1.12 (20% below the previous 1.4); scripted gift specials and Domain cinematics keep their original timing. Backend config migration `rules_version: 6` applies these values to existing arenas once.
+- Audio cues are phase-specific: basic punch/kick contact uses only `punch.mp3`; `flashbang.mp3` and `faah.mp3` alternate only when a gift special actually deals damage; `lula-special.mp3` plays once at the start of Lula's special.

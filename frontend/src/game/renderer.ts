@@ -1,8 +1,8 @@
 /** Canvas renderer: world (camera space) + HUD overlays (screen space). */
-import { CANVAS_H, CANVAS_W, CHARACTERS, FX_SPRITES, GROUND_Y, POSE_ANCHOR, POSE_HEIGHT, SPECIAL_COLORS, spritePath } from "./assets";
+import { CANVAS_H, CANVAS_W, CHARACTERS, FX_SPRITES, GROUND_Y, POSE_ANCHOR, POSE_HEIGHT, SHORYUKEN_COLORS, SPECIAL_COLORS, ULTRA_COLORS, spritePath } from "./assets";
 import type { Projectile } from "./combat";
 import { domainScale, type Domain } from "./domain";
-import { HADOUKEN_RELEASE } from "./moves";
+import { HADOUKEN_RELEASE, ULTRA_RELEASE } from "./moves";
 import { applyCamera, type Camera } from "./camera";
 import { drawWorldEffects, type Effects } from "./effects";
 import type { Fighter, Pose } from "./types";
@@ -47,6 +47,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, 
   ctx.ellipse(f.x, GROUND_Y + 4, (f.pose === "knockdown" ? 90 : 62) * Math.max(0.55, 1 - lift / 400), 11, 0, 0, Math.PI * 2);
   ctx.fill();
   drawAura(ctx, f, x, y, time);
+  if (f.move === "shoryuken") drawShoryuken(ctx, f, x, y, time);
   ctx.save();
   if (f.move || f.state === "domain") { ctx.shadowColor = CHARACTERS[f.id].accent; ctx.shadowBlur = 14; }
   // Frozen inside a domain: icy blue tint.
@@ -67,6 +68,28 @@ function drawFighter(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, 
       ctx.fillRect(x + Math.cos(a) * 34 - 4, y - 262 + Math.sin(a) * 9, 8, 8);
     }
   }
+}
+
+/** Vertical flame/trail around the five-stage Shoryuken movement. */
+function drawShoryuken(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: number, time: number) {
+  const c = SHORYUKEN_COLORS[f.id];
+  const rise = Math.min(1, f.moveTime / 0.42);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createLinearGradient(x, y, x, y - 250);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(0.45, c.outer);
+  g.addColorStop(1, c.mid);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(x - f.facing * 12, y - 92 * rise, 42 + rise * 18, 88 + rise * 92, -0.12 * f.facing, 0, Math.PI * 2);
+  ctx.fill();
+  for (let i = 0; i < 8; i += 1) {
+    const yy = y - ((time * 260 + i * 37) % 250);
+    ctx.fillStyle = c.sparks[i % c.sparks.length];
+    ctx.fillRect(Math.round(x + Math.sin(i * 4.7) * 34), Math.round(yy), 5 + (i % 3), 5 + (i % 3));
+  }
+  ctx.restore();
 }
 
 /** Gift boost auras: fiery orange for damage, cyan shield for defense. */
@@ -185,8 +208,8 @@ function drawDomain(ctx: CanvasRenderingContext2D, d: Domain, time: number) {
 }
 
 /** Glowing energy orb (hadouken) in the fighter's colour; `stretch` elongates it into a flame. */
-function drawOrb(ctx: CanvasRenderingContext2D, id: Fighter["id"], x: number, y: number, radius: number, facing: number, stretch: number, time: number) {
-  const c = SPECIAL_COLORS[id];
+function drawOrb(ctx: CanvasRenderingContext2D, id: Fighter["id"], x: number, y: number, radius: number, facing: number, stretch: number, time: number, ultra = false) {
+  const c = ultra ? ULTRA_COLORS[id] : SPECIAL_COLORS[id];
   const flicker = 1 + Math.sin(time * 40) * 0.08;
   const r = radius * flicker;
   ctx.save();
@@ -220,12 +243,15 @@ function drawOrb(ctx: CanvasRenderingContext2D, id: Fighter["id"], x: number, y:
 
 /** Energy gathering between the hands while charging the hadouken. */
 function drawCharge(ctx: CanvasRenderingContext2D, f: Fighter, time: number) {
-  if (f.move !== "hadouken" || f.moveTime > HADOUKEN_RELEASE + 0.04) return;
-  const k = Math.min(1, f.moveTime / HADOUKEN_RELEASE);
+  if (f.move !== "hadouken" && f.move !== "ultra_hadouken") return;
+  const ultra = f.move === "ultra_hadouken";
+  const release = ultra ? ULTRA_RELEASE : HADOUKEN_RELEASE;
+  if (f.moveTime > release + 0.04) return;
+  const k = Math.min(1, f.moveTime / release);
   const releasing = f.pose === "fireball";
   const dx = releasing ? 104 : 46;
   const dy = releasing ? -140 : -100;
-  drawOrb(ctx, f.id, f.x + (f.ox + dx) * f.facing, GROUND_Y + f.y + f.oy + dy, 8 + 16 * k, f.facing, 0, time);
+  drawOrb(ctx, f.id, f.x + (f.ox + dx) * f.facing, GROUND_Y + f.y + f.oy + dy, (ultra ? 18 : 8) + (ultra ? 46 : 16) * k, f.facing, 0, time, ultra);
 }
 
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = "center") {
@@ -252,7 +278,7 @@ export function render(ctx: CanvasRenderingContext2D, images: Images, s: RenderS
   s.fighters.forEach((f) => drawCharge(ctx, f, s.time));
   if (s.domain && s.domain.ballX !== null) drawOrb(ctx, s.domain.attacker.id, s.domain.ballX, GROUND_Y - 140, 44, s.domain.attacker.facing, 1, s.time);
   if (s.domain && s.domain.attacker.pose === "charge") drawOrb(ctx, s.domain.attacker.id, s.domain.attacker.x + 46 * s.domain.attacker.facing, GROUND_Y - 100, 24, s.domain.attacker.facing, 0, s.time);
-  s.projectiles.forEach((p) => drawOrb(ctx, p.owner.id, p.x, p.y, 30, Math.sign(p.vx), Math.min(1, p.age * 6), s.time + p.age));
+  s.projectiles.forEach((p) => drawOrb(ctx, p.owner.id, p.x, p.y, p.kind === "fatality" ? 112 : p.kind === "ultra_hadouken" ? 72 : 30, Math.sign(p.vx), p.kind === "hadouken" ? Math.min(1, p.age * 6) : 1.8, s.time + p.age, p.kind !== "hadouken"));
   drawWorldEffects(ctx, s.fx);
   ctx.restore();
 

@@ -50,6 +50,7 @@ export function GiftCaptions({ captions, durationMs, onDone }: GiftCaptionsProps
         </span>
         <em className="thanks-effect" data-testid="thanks-cutscene-effect">{giftEffectLabel(current)}</em>
       </div>
+      <span className="thanks-paused" data-testid="thanks-cutscene-pause-label">BATALHA PAUSADA</span>
       {captions.length > 1 && <span className="thanks-backlog" data-testid="thanks-cutscene-backlog">+{captions.length - 1}</span>}
       <div className="thanks-bar thanks-bar-bottom" />
     </div>

@@ -7,8 +7,8 @@ export type IntegrationMode = "demo" | "live";
 export type CombatMode = "live" | "normal";
 export type TargetCharacter = "opponent" | CharacterId;
 export type RepeatPolicy = "individual" | "group";
-/** Special moves a gift can trigger (from the reference movement sheet). */
-export type SpecialMove = "none" | "hadouken" | "domain" | "damage_boost" | "defense_boost";
+/** Special moves a gift can trigger (from the reference movement sheets). */
+export type SpecialMove = "none" | "hadouken" | "shoryuken" | "ultra_hadouken" | "domain" | "damage_boost" | "defense_boost";
 
 export interface GiftRule {
   gift_id: string;
@@ -116,7 +116,7 @@ export const fetchLiveQueue = () => apiGet<GiftEvent[]>("/live/queue");
 export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   id: "default",
   integration_mode: "demo",
-  rules_version: 4,
+  rules_version: 6,
   combat: {
     max_hp: 600,
     common_damage: 5,
@@ -125,8 +125,8 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
     recovery_ms: 650,
     invulnerability_ms: 420,
     fight_duration_sec: 180,
-    animation_speed: 1,
-    auto_attack_frequency: 1.4,
+    animation_speed: 0.85,
+    auto_attack_frequency: 1.12,
     combat_mode: "live",
     visual_intensity: 1,
     collective_goal: 150,
@@ -143,17 +143,20 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   rules: [
     { gift_id: "rose", gift_name: "Rosa", reference_value: 1, action_name: "Dano +10%", damage: 0, animation_ms: 1200, effect_intensity: 1, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "damage_boost" },
     { gift_id: "heart", gift_name: "Coração", reference_value: 1, action_name: "Defesa +10%", damage: 0, animation_ms: 1200, effect_intensity: 1, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "defense_boost" },
-    { gift_id: "donut", gift_name: "Rosquinha", reference_value: 30, action_name: "Hadouken", damage: 30, animation_ms: 1800, effect_intensity: 1.2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "hadouken" },
+    { gift_id: "donut", gift_name: "Rosquinha", reference_value: 30, action_name: "Shoryuken", damage: 45, animation_ms: 1500, effect_intensity: 1.4, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "shoryuken" },
     { gift_id: "lion", gift_name: "Leão", reference_value: 29999, action_name: "Expansão de Domínio", damage: 120, animation_ms: 6500, effect_intensity: 2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "domain" },
+    { gift_id: "universe", gift_name: "Universo TikTok", reference_value: 44999, action_name: "Ultra Hadouken", damage: 240, animation_ms: 2600, effect_intensity: 3, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "ultra_hadouken" },
   ],
 };
 
-export const GIFT_ICONS: Record<string, string> = { rose: "🌹", heart: "💗", donut: "🍩", lion: "🦁" };
+export const GIFT_ICONS: Record<string, string> = { rose: "🌹", heart: "💗", donut: "🍩", lion: "🦁", universe: "🌌" };
 export const SPECIAL_MOVES: { id: SpecialMove; label: string }[] = [
   { id: "none", label: "Nenhum" },
   { id: "damage_boost", label: "Dano +10%" },
   { id: "defense_boost", label: "Defesa +10%" },
   { id: "hadouken", label: "Hadouken" },
+  { id: "shoryuken", label: "Shoryuken" },
+  { id: "ultra_hadouken", label: "Ultra Hadouken" },
   { id: "domain", label: "Expansão de Domínio" },
 ];
 
@@ -170,6 +173,8 @@ export function giftEffectLabel(event: GiftEvent): string {
     case "damage_boost": return `DANO +${Math.min(DAMAGE_BOOST_MAX, BOOST_STEP * q)}%`;
     case "defense_boost": return `DEFESA +${Math.min(DEFENSE_BOOST_MAX, BOOST_STEP * q)}%`;
     case "hadouken": return q > 1 ? `HADOUKEN x${Math.min(10, q)}` : "HADOUKEN";
+    case "shoryuken": return q > 1 ? `SHORYUKEN x${Math.min(10, q)}` : "SHORYUKEN";
+    case "ultra_hadouken": return q > 1 ? `ULTRA HADOUKEN x${Math.min(10, q)}` : "ULTRA HADOUKEN";
     case "domain": return "EXPANSÃO DE DOMÍNIO";
     default: return event.action_name.toUpperCase();
   }

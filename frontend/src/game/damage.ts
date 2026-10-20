@@ -15,6 +15,8 @@ export interface DamageRequest {
 }
 
 export function resolveDamage(settings: CombatSettings, req: DamageRequest): number {
+  // The 20-gift Fatality is the only attack allowed to bypass boosts and the normal gift finisher guard.
+  if (req.source === "fatality") return req.target.hp;
   if (req.outcome === "dodge") return 0;
   if (req.source === "auto" && settings.combat_mode === "live") return 0;
   let amount = Math.max(0, req.amount);

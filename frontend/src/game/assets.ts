@@ -35,6 +35,22 @@ export const SPECIAL_COLORS: Record<CharacterId, { core: string; mid: string; ou
   flavio: { core: "#eef8ff", mid: "#3aa0ff", outer: "rgba(90,70,255,0.45)", sparks: ["#3aa0ff", "#8f7bff", "#d9f1ff"] },
 };
 
+/** Shoryuken colours requested for each fighter: Lula red, Flávio green and yellow. */
+export const SHORYUKEN_COLORS: Record<CharacterId, { core: string; mid: string; outer: string; sparks: string[] }> = {
+  lula: { core: "#fff4e6", mid: "#ff2d1a", outer: "rgba(255,35,20,0.48)", sparks: ["#ff2d1a", "#ff8a3d", "#fff4e6"] },
+  flavio: { core: "#fffbd1", mid: "#39ff14", outer: "rgba(57,255,20,0.48)", sparks: ["#39ff14", "#ffe600", "#ffffff"] },
+};
+
+/** Giant Ultra/Fatality projectile palette. */
+export const ULTRA_COLORS = SHORYUKEN_COLORS;
+
+export const SOUND_FILES = {
+  flashbang: "/audio/flashbang.mp3",
+  faah: "/audio/faah.mp3",
+  lulaSpecial: "/audio/lula-special.mp3",
+  punch: "/audio/punch.mp3",
+} as const;
+
 /** Domain expansion per fighter (from the user's domain catalogue). */
 export const DOMAINS: Record<CharacterId, { title: string; name: string }> = {
   lula: { title: "EXPANSÃO DE DOMÍNIO", name: "ARENA SANGRENTA" },

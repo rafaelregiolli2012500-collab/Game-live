@@ -156,6 +156,7 @@
 @keyframes thanks-copy-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes thanks-bar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes thanks-glow { 50% { text-shadow: 0 0 18px var(--accent), 3px 3px 0 #05060a; } }
+@keyframes fatality-blink { 0%, 100% { opacity: 1; filter: brightness(1); } 45% { opacity: .42; filter: brightness(1.8); } }
 .thanks-cutscene { position: absolute; inset: 0; z-index: 6; overflow: hidden; background: #05060a; animation: thanks-in .42s cubic-bezier(.2,.9,.3,1) both; pointer-events: none; }
 .thanks-cutscene.is-leaving { animation: thanks-out .38s ease forwards; }
 .thanks-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 30% 35%; image-rendering: pixelated; animation: thanks-zoom 3.2s ease-out both; }
@@ -173,6 +174,7 @@
 .thanks-gift b { font-size: 1.6em; }
 .thanks-gift i { padding: 1px 4px; border-radius: 3px; color: #080911; background: #ffe600; font-size: .7em; font-style: normal; }
 .thanks-effect { padding: 3px 8px; border: 1px solid var(--accent); border-radius: 4px; color: #ffe600; background: rgba(5,6,10,.7); font: 900 clamp(7px, 1.9vw, 13px) "Space Grotesk", sans-serif; font-style: normal; letter-spacing: .08em; }
+.thanks-paused { position: absolute; bottom: 11%; left: 50%; padding: 3px 8px; border: 1px solid rgba(255,255,255,.35); border-radius: 3px; color: #fff; background: rgba(5,6,10,.76); font: 900 7px "Geist Mono Variable", monospace; letter-spacing: .18em; transform: translateX(-50%); }
 .thanks-backlog { position: absolute; top: 11%; right: 3%; color: #fff; font: 800 9px "Geist Mono Variable", monospace; }
 /* ---------- Boost chips under each profile ---------- */
 .boost-chips { display: flex; flex-wrap: wrap; gap: 3px; min-height: 0; margin-top: 3px; }
@@ -180,3 +182,24 @@
 .boost-chip { padding: 1px 4px; border-radius: 3px; font: 800 7px "Geist Mono Variable", monospace; white-space: nowrap; animation: float-in .25s ease both; }
 .boost-damage { color: #1a0800; background: linear-gradient(90deg, #ffe600, #ff9d1e); box-shadow: 0 0 8px rgba(255,157,30,.6); }
 .boost-defense { color: #001a20; background: linear-gradient(90deg, #9fe8ff, #00f0ff); box-shadow: 0 0 8px rgba(0,240,255,.55); }
+
+/* ---------- Persistent 20-gift Ultra dispute ---------- */
+.stream-composition { grid-template-rows: 136px minmax(0, 1fr) 132px; }
+.broadcast-top-bar { flex-direction: column; align-items: stretch; gap: 5px; padding: 6px 9px 7px; }
+.broadcast-match-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.ultra-dispute { display: grid; gap: 2px; width: 100%; }
+.ultra-dispute-title { position: relative; display: flex; align-items: baseline; justify-content: center; gap: 5px; min-height: 10px; color: #ffe600; font: 900 7px "Geist Mono Variable", monospace; letter-spacing: .09em; text-shadow: 0 0 7px rgba(255,230,0,.6); }
+.ultra-dispute-title span { color: #fff; }
+.ultra-dispute-title em { position: absolute; inset: -2px 0 auto; z-index: 2; padding: 2px 5px; color: #fff; background: linear-gradient(90deg, rgba(255,0,110,.95), rgba(255,30,15,.95)); font: 900 8px "Space Grotesk", sans-serif; font-style: normal; text-align: center; letter-spacing: .12em; animation: fatality-blink .55s steps(2, end) infinite; }
+.ultra-dispute-track { display: grid; grid-template-columns: 1fr 22px 1fr; align-items: center; height: 9px; overflow: hidden; border: 1px solid rgba(255,255,255,.32); border-radius: 2px; background: #080a10; box-shadow: 0 0 10px rgba(0,240,255,.15); }
+.ultra-dispute-track > strong { display: grid; height: 100%; place-items: center; color: #ffe600; background: #11131e; font: 900 6px "Geist Mono Variable", monospace; }
+.ultra-team { display: flex; height: 100%; background: rgba(255,255,255,.05); }
+.ultra-team i { display: block; height: 100%; transition: width .35s cubic-bezier(.2,.9,.3,1); }
+.ultra-team-blue { justify-content: flex-end; }
+.ultra-team-blue i { background: linear-gradient(90deg, #00783a, #39ff14, #ffe600); box-shadow: 0 0 9px rgba(57,255,20,.7); }
+.ultra-team-red { justify-content: flex-start; }
+.ultra-team-red i { background: linear-gradient(90deg, #ff8a3d, #ff2d1a, #ff006e); box-shadow: 0 0 9px rgba(255,45,26,.75); }
+.ultra-dispute-scores { display: flex; justify-content: space-between; color: #91a0b6; font: 800 6px "Geist Mono Variable", monospace; letter-spacing: .06em; }
+.ultra-dispute-scores b { color: #fff; font-size: 7px; }
+.ultra-dispute.is-fatality .ultra-dispute-track { border-color: #ffe600; box-shadow: 0 0 15px rgba(255,230,0,.7); }
+@media (max-width: 620px) { .stream-composition { grid-template-rows: 124px minmax(0, 1fr) 120px; } .broadcast-top-bar { padding: 5px 7px; } .ultra-dispute-title { font-size: 6px; } .ultra-dispute-title em { font-size: 7px; } }

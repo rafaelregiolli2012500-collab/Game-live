@@ -1,0 +1,61 @@
+{
+  "iteration": 5,
+  "mode": "generate",
+  "summary": "Covered the v7 acceptance matrix (5 criteria: slower default combat config, special-only heavy audio phases, Lula's start-of-special audio, and a pause/dispute/Fatality regression) with 1 backend test file + 5 new browser checks, plus a re-run of the baseline start-screen-opens-arena check against the public preview URL. All 7 artifacts pass. One browser check (special-audio-exclusive-to-impact) failed once on a tight ~0ms timing race right at the cutscene-hide boundary and passed clean on rerun -> classified flaky, not a bug (confirmed healthy via a throwaway debug script showing flashbang.mp3 requested 278ms after the cutscene hid, i.e. strictly on impact as specified).",
+  "passed": 7,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "A luta padrão está visivelmente mais lenta sem desacelerar especiais",
+      "name": "test_tscheck_slower_combat_config (test_live_config_reports_slower_default_combat_values)",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/live/config -> 200; body.rules_version == 6, body.combat.animation_speed == 0.85, body.combat.auto_attack_frequency == 1.12. Cross-checked GET /api/live/status -> 200."
+    },
+    {
+      "criterion": "A luta padrão está visivelmente mais lenta sem desacelerar especiais",
+      "name": "admin-shows-slow-combat-config-and-shoryuken-timing",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "ADMIN animation-speed-input shows '0.85' and combat-frequency-input shows '1.12'. Donut for Lula still resolved to exactly -45 HP on Flávio and the full cutscene+Shoryuken flow completed in well under 8s, confirming the gift special's cinematic timing is unaffected by the 0.85x slowdown. No console errors."
+    },
+    {
+      "criterion": "Golpes básicos usam somente o áudio comum",
+      "name": "basic-attacks-only-request-punch-audio",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Switched combat-mode-select to 'normal' and saved via save-live-config-button; waited for CPU-vs-CPU basic contacts to move HP (no gift sent). Network capture showed >=1 request for punch.mp3 and zero requests for flashbang.mp3/faah.mp3."
+    },
+    {
+      "criterion": "Flashbang e Faah ficam exclusivos ao contato de dano das especiais",
+      "name": "special-audio-exclusive-to-impact",
+      "lane": "browser",
+      "status": "flaky",
+      "evidence": "Two consecutive Donut (Shoryuken) hits to Flávio: flashbang.mp3 then faah.mp3 requested in order, only after each thanks-cutscene hid and HP dropped by 45 each time (never while the cutscene was visible). First attempt failed on a race where the audio-request snapshot was taken ~0ms before the actual impact fired (confirmed via a debug timing script: flashbang.mp3 requested 278ms after cutscene-hidden, i.e. correctly on-impact); clean rerun passed. No console errors on either run."
+    },
+    {
+      "criterion": "Especial do Lula mantém o áudio próprio no início",
+      "name": "lula-special-audio-at-shoryuken-start",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Donut for Lula: lula-special.mp3 requested while Flávio's HP was still unchanged (start of Shoryuken, before contact); HP then dropped exactly 45 and flashbang/faah fired on that contact. Zero HTTP >=400 responses and zero console/page errors captured."
+    },
+    {
+      "criterion": "Pausa da cutscene, disputa e Fatality continuam funcionando",
+      "name": "pause-dispute-fatality-still-working",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Rosa cutscene kept timer-display frozen while visible. Heart x19 for Lula landed the dispute at exactly '19/20'; one more Heart pushed it to '20/20', fatality-definitivo-banner showed 'FATALITY DEFINITIVO', Flávio's HP dropped to 0, and both ultra-red-score/ultra-blue-score reset to '0/20'."
+    },
+    {
+      "criterion": "Baseline regression: arena loads without login on the public ingress",
+      "name": "start-screen-opens-arena",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran the existing persisted check against https://live-game-preview-1.preview.emergentagent.com; gameplay-screen became visible with no login gate, no console errors."
+    }
+  ]
+}

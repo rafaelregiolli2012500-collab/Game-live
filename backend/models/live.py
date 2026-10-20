@@ -8,8 +8,16 @@ Character = Literal["lula", "flavio"]
 IntegrationMode = Literal["demo", "live"]
 CombatMode = Literal["live", "normal"]
 TargetCharacter = Literal["opponent", "lula", "flavio"]
-# Special moves a gift can trigger (from the reference movement sheet).
-SpecialMove = Literal["none", "hadouken", "domain", "damage_boost", "defense_boost"]
+# Special moves a gift can trigger (from the reference movement sheets).
+SpecialMove = Literal[
+    "none",
+    "hadouken",
+    "shoryuken",
+    "ultra_hadouken",
+    "domain",
+    "damage_boost",
+    "defense_boost",
+]
 
 
 class GiftRule(BaseModel):
@@ -34,8 +42,8 @@ class CombatSettings(BaseModel):
     recovery_ms: int = Field(default=650, ge=50, le=5000)
     invulnerability_ms: int = Field(default=420, ge=0, le=5000)
     fight_duration_sec: int = Field(default=180, ge=30, le=900)
-    animation_speed: float = Field(default=1, ge=0.5, le=2)
-    auto_attack_frequency: float = Field(default=1.4, ge=0.2, le=8)
+    animation_speed: float = Field(default=0.85, ge=0.5, le=2)
+    auto_attack_frequency: float = Field(default=1.12, ge=0.2, le=8)
     combat_mode: CombatMode = "live"
     visual_intensity: float = Field(default=1, ge=0.2, le=3)
     collective_goal: int = Field(default=150, ge=1, le=100000)
@@ -54,8 +62,8 @@ class LiveConfig(BaseModel):
     id: str = "default"
     integration_mode: IntegrationMode = "demo"
     rules: list[GiftRule] = Field(default_factory=list)
-    # Bumped when the gift catalogue changes; v2 = old gifts removed, v3 = Rosa → Hadouken, v4 = boosts + domain.
-    rules_version: int = 4
+    # Bumped for catalogue/settings migrations; v6 = slower basic combat cadence.
+    rules_version: int = 6
     combat: CombatSettings = Field(default_factory=CombatSettings)
 
 

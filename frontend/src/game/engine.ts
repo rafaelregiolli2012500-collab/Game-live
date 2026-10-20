@@ -5,7 +5,7 @@
  */
 import { BOOST_DURATION_SEC, BOOST_STEP, DAMAGE_BOOST_MAX, DEFENSE_BOOST_MAX, type CombatSettings, type GiftEvent } from "@/lib/live";
 import { updateAi } from "./ai";
-import { CHARACTERS, DOMAINS, loadImages } from "./assets";
+import { CHARACTERS, DOMAINS, SOUND_FILES, loadImages } from "./assets";
 import { createCamera, resetCamera, updateCamera } from "./camera";
 import { createFighter, isAirborne, isFree, setState, startMove, updateMove, updateProjectiles, type CombatContext } from "./combat";
 import { adminAdjust } from "./damage";
@@ -13,12 +13,12 @@ import { endDomain, startDomain, updateDomain, type Domain } from "./domain";
 import { burst, createEffects, updateEffects } from "./effects";
 import { animateMove, animateState } from "./moves";
 import { render, type RenderState } from "./renderer";
-import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState, HudSnapshot } from "./types";
+import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState, GiftAttackKind, HudSnapshot } from "./types";
 
 const GRAVITY = 1500;
 const ROUND_BREAK_SEC = 7;
 
-export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, domains: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
+export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, shoryuken: 0, ultra_hadouken: 0, fatalities: 0, domains: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
 
 /** Force both fighters to face each other (never show their backs). */
 function lockFacing(a: Fighter, b: Fighter) {
@@ -40,7 +40,7 @@ export class ArenaEngine {
   private roundOverAt: number | null = null;
   private banner: RenderState["banner"] = null;
   /** Gift specials waiting for their fighter to be free. */
-  private specials: { id: CharacterId; kind: "hadouken" | "domain"; damage: number; username: string }[] = [];
+  private specials: { id: CharacterId; kind: GiftAttackKind | "domain"; damage: number; username: string }[] = [];
   private domain: Domain | null = null;
 
   private settings: CombatSettings;
@@ -50,6 +50,8 @@ export class ArenaEngine {
 
   private volume = 0.6;
   private audio: AudioContext | null = null;
+  private clips = new Set<HTMLAudioElement>();
+  private strongSound = 0;
 
   constructor(canvas: HTMLCanvasElement, settings: CombatSettings, left: CharacterId, right: CharacterId, callbacks: EngineCallbacks) {
     this.settings = settings;
@@ -58,17 +60,45 @@ export class ArenaEngine {
     this.callbacks = callbacks;
     this.ctx = canvas.getContext("2d")!;
     this.ctx.imageSmoothingEnabled = false;
-    this.ctxCombat = { settings, fx: createEffects(), camera: createCamera(), stats: emptyStats(), time: 0, sound: (power) => this.playHit(power), projectiles: [] };
+    this.ctxCombat = { settings, fx: createEffects(), camera: createCamera(), stats: emptyStats(), time: 0, sound: (power, fighter, cue) => this.playHit(power, fighter, cue), onFatalityHit: (winner) => this.callbacks.onFatalityComplete(winner), projectiles: [] };
     this.resetRound();
     this.raf = requestAnimationFrame(this.frame);
   }
 
-  destroy() { cancelAnimationFrame(this.raf); void this.audio?.close(); }
+  destroy() { cancelAnimationFrame(this.raf); this.clips.forEach((clip) => clip.pause()); this.clips.clear(); void this.audio?.close(); }
   setVolume(volume: number) { this.volume = volume; }
   setPaused(paused: boolean) { this.paused = paused; }
 
-  private playHit(power: number) {
+  private playHit(power: number, fighter?: CharacterId, cue: "basic" | "special-start" | "special-impact" = "basic") {
     if (this.volume <= 0) return;
+    if (cue === "special-start") {
+      if (fighter !== "lula") return;
+      this.playClip(SOUND_FILES.lulaSpecial, this.volume * 0.9, 5200, power);
+      return;
+    }
+    if (cue === "special-impact") {
+      this.playClip([SOUND_FILES.flashbang, SOUND_FILES.faah][this.strongSound++ % 2], this.volume * 0.72, 1500, power);
+      return;
+    }
+    // Basic punches and kicks use only the supplied ordinary impact sample.
+    this.playClip(SOUND_FILES.punch, this.volume * 0.55, 650, power);
+  }
+
+  private playClip(source: string, volume: number, stopAfter: number, fallbackPower?: number) {
+    try {
+      const clip = new Audio(source);
+      clip.volume = Math.min(1, volume);
+      this.clips.add(clip);
+      const cleanup = () => { clip.pause(); this.clips.delete(clip); };
+      clip.addEventListener("ended", cleanup, { once: true });
+      window.setTimeout(cleanup, stopAfter);
+      void clip.play().catch(() => { if (fallbackPower !== undefined) this.playSynth(fallbackPower); });
+      return;
+    } catch { /* use generated fallback below */ }
+    if (fallbackPower !== undefined) this.playSynth(fallbackPower);
+  }
+
+  private playSynth(power: number) {
     try {
       this.audio ??= new AudioContext();
       const osc = this.audio.createOscillator();
@@ -122,11 +152,23 @@ export class ArenaEngine {
       this.playHit(0.8);
       return;
     }
-    if (event.special_move !== "hadouken" && event.special_move !== "domain") return;
+    if (event.special_move !== "hadouken" && event.special_move !== "shoryuken" && event.special_move !== "ultra_hadouken" && event.special_move !== "domain") return;
     const kind = event.special_move;
     const units = kind === "domain" ? 1 : event.repeat_policy === "group" ? 1 : Math.min(10, event.quantity);
     const damage = kind === "domain" || event.repeat_policy === "group" ? event.damage * event.quantity : event.damage;
     for (let i = 0; i < units; i += 1) this.specials.push({ id, kind, damage, username: event.username });
+  }
+
+  /** Priority attack earned by reaching 20 gifts; it cancels the current exchange and always KOs. */
+  triggerFatality(id: CharacterId, username: string) {
+    this.specials = [];
+    this.ctxCombat.projectiles = [];
+    if (this.domain) this.domain.victim.frozen = 0;
+    this.domain = null;
+    this.fighters.forEach((fighter) => { fighter.special = null; fighter.combo = []; fighter.grabPartner = null; setState(fighter, "idle"); });
+    this.ctxCombat.stats.fatalities += 1;
+    this.specials.unshift({ id, kind: "fatality", damage: this.settings.max_hp, username });
+    this.banner = { text: "FATALITY DEFINITIVO", sub: `${CHARACTERS[id].name} DOMINOU A DISPUTA`, until: this.ctxCombat.time + 3 };
   }
 
   private processSpecials() {
@@ -148,11 +190,18 @@ export class ArenaEngine {
           return;
         }
         this.specials.splice(index, 1);
-        f.special = { damage: next.damage, username: next.username };
+        const victim = this.fighters.find((item) => item !== f)!;
+        if (next.kind === "shoryuken") {
+          if (!isFree(victim) || victim.y < 0 || this.ctxCombat.projectiles.length) { this.specials.splice(index, 0, next); continue; }
+          f.x = Math.max(90, Math.min(870, victim.x - f.facing * 108));
+        }
+        f.special = { kind: next.kind, damage: next.damage, username: next.username };
       }
-      // Fire (or re-fire if a previous attempt was interrupted before the release).
+      // Start the scripted gift move (or re-fire if an attempt was interrupted before release).
       f.combo = [];
-      startMove(f, "hadouken", this.ctxCombat);
+      const move = f.special.kind === "shoryuken" ? "shoryuken" : f.special.kind === "hadouken" ? "hadouken" : "ultra_hadouken";
+      if (move === "shoryuken") this.playHit(1.8, f.id, "special-start");
+      startMove(f, move, this.ctxCombat);
       f.invuln = 0.5;
     }
   }
@@ -255,7 +304,7 @@ export class ArenaEngine {
       this.callbacks.onHud({
         hp: { [a.id]: a.hp, [b.id]: b.hp } as Record<CharacterId, number>,
         timeLeft: this.timeLeft, round: this.round, stats: { ...this.ctxCombat.stats }, states,
-        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken").length + (this.domain ? 1 : 0),
+        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken" || f.move === "shoryuken" || f.move === "ultra_hadouken").length + (this.domain ? 1 : 0),
         boosts: Object.fromEntries(this.fighters.map((f) => [f.id, { damage: f.dmgBoost.pct, damageLeft: f.dmgBoost.left, defense: f.defBoost.pct, defenseLeft: f.defBoost.left }])) as HudSnapshot["boosts"],
         domain: this.domain ? DOMAINS[this.domain.attacker.id].name : null,
       });

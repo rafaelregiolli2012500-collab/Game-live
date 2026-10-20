@@ -31,6 +31,8 @@ Formato do evento (`GiftEvent`): `event_id`, `sequence`, `username`, `user_id`, 
 `benefited_character`, `target_character`, `action_name`, `damage`, `animation_ms`, `effect_intensity`, `repeat_policy`, `source`.
 A associação é feita por `gift_id` (identificador do conector), nunca só pelo nome exibido.
 
+Catálogo demo padrão: Rosa = dano +10%, Coração = defesa +10%, Rosquinha = Shoryuken, Leão = Expansão de Domínio e Universo TikTok = Ultra Hadouken. Cada unidade também soma um ponto na disputa persistente de 20 presentes do personagem beneficiado.
+
 ## O que falta para ativar o LIVE real
 1. Escolher um serviço/biblioteca compatível que entregue eventos de presente da sua LIVE (o TikTok não documenta uma API pública
    oficial de presentes em tempo real; verifique termos de uso e permissões do provedor escolhido).

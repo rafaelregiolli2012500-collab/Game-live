@@ -12,14 +12,15 @@ router = APIRouter()
 GAME_ID = "main-arena"
 CONFIG_ID = "default"
 
-# Gift catalogue (editable in ADMIN). Cheapest gifts buff, mid gift = Hadouken, top gift = Domain Expansion.
+# Gift catalogue (editable in ADMIN). Every rule can be remapped without changing the combat loop.
 DEFAULT_RULES: list[GiftRule] = [
     GiftRule(gift_id="rose", gift_name="Rosa", reference_value=1, action_name="Dano +10%", damage=0, animation_ms=1200, effect_intensity=1.0, target_character="opponent", special_move="damage_boost"),
     GiftRule(gift_id="heart", gift_name="Coração", reference_value=1, action_name="Defesa +10%", damage=0, animation_ms=1200, effect_intensity=1.0, target_character="opponent", special_move="defense_boost"),
-    GiftRule(gift_id="donut", gift_name="Rosquinha", reference_value=30, action_name="Hadouken", damage=30, animation_ms=1800, effect_intensity=1.2, special_move="hadouken"),
+    GiftRule(gift_id="donut", gift_name="Rosquinha", reference_value=30, action_name="Shoryuken", damage=45, animation_ms=1500, effect_intensity=1.4, special_move="shoryuken"),
     GiftRule(gift_id="lion", gift_name="Leão", reference_value=29999, action_name="Expansão de Domínio", damage=120, animation_ms=6500, effect_intensity=2.0, special_move="domain"),
+    GiftRule(gift_id="universe", gift_name="Universo TikTok", reference_value=44999, action_name="Ultra Hadouken", damage=240, animation_ms=2600, effect_intensity=3.0, special_move="ultra_hadouken"),
 ]
-RULES_VERSION = 4
+RULES_VERSION = 6
 
 _clients: dict[str, set[WebSocket]] = {}
 _queues: dict[str, asyncio.Queue[GiftEvent]] = {}
@@ -39,7 +40,8 @@ async def get_config() -> LiveConfig:
         default_ids = {rule.gift_id for rule in DEFAULT_RULES}
         kept = [r for r in stored.get("rules", []) if r.get("gift_id") not in default_ids] if stored.get("rules_version", 1) >= 2 else []
         rules = [rule.model_dump() for rule in DEFAULT_RULES] + kept
-        config = LiveConfig(**{**stored, "rules": rules, "rules_version": RULES_VERSION})
+        combat = {**stored.get("combat", {}), "animation_speed": 0.85, "auto_attack_frequency": 1.12}
+        config = LiveConfig(**{**stored, "rules": rules, "rules_version": RULES_VERSION, "combat": combat})
         await db.live_config.replace_one({"id": CONFIG_ID}, config.model_dump(), upsert=True)
         return config
     config = LiveConfig(id=CONFIG_ID, rules=DEFAULT_RULES, combat=CombatSettings())

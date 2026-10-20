@@ -3,12 +3,11 @@
  * Damage values are requested from damage.ts; this module never writes HP itself.
  */
 import type { CombatSettings } from "@/lib/live";
-import { GROUND_Y } from "./assets";
+import { GROUND_Y, SHORYUKEN_COLORS, SPECIAL_COLORS, ULTRA_COLORS } from "./assets";
 import { shake, type Camera } from "./camera";
 import { applyDamage } from "./damage";
 import { burst, flash, ring, type Effects } from "./effects";
-import { SPECIAL_COLORS } from "./assets";
-import { AIRKICK_AIR, HADOUKEN_RELEASE, MOVES } from "./moves";
+import { AIRKICK_AIR, HADOUKEN_RELEASE, MOVES, ULTRA_RELEASE } from "./moves";
 
 const SPECIAL_SPARKS = { lula: SPECIAL_COLORS.lula.sparks, flavio: SPECIAL_COLORS.flavio.sparks };
 import type { BasicMove, CombatStats, Fighter, FighterState, HitOutcome } from "./types";
@@ -20,6 +19,7 @@ export interface Projectile {
   vx: number;
   age: number;
   damage: number;
+  kind: "hadouken" | "ultra_hadouken" | "fatality";
 }
 
 export interface CombatContext {
@@ -28,7 +28,8 @@ export interface CombatContext {
   camera: Camera;
   stats: CombatStats;
   time: number;
-  sound: (power: number) => void;
+  sound: (power: number, fighter?: Fighter["id"], cue?: "basic" | "special-start" | "special-impact") => void;
+  onFatalityHit: (winner: Fighter["id"]) => void;
   projectiles: Projectile[];
 }
 
@@ -74,10 +75,10 @@ function damageFor(move: BasicMove, s: CombatSettings) {
 }
 
 /** Visual + physical reaction to a contact. */
-export function reactToContact(attacker: Fighter, target: Fighter, outcome: HitOutcome, power: number, stunValue: number, ctx: CombatContext, colors: string[], hitHeight = 150) {
+export function reactToContact(attacker: Fighter, target: Fighter, outcome: HitOutcome, power: number, stunValue: number, ctx: CombatContext, colors: string[], hitHeight = 150, cue: "basic" | "special-impact" = "basic") {
   const hx = target.x - attacker.facing * 20;
   const hy = GROUND_Y - hitHeight;
-  ctx.sound(outcome === "hit" ? power : 0.3);
+  ctx.sound(outcome === "hit" ? power : 0.3, attacker.id, cue);
   if (outcome === "dodge") {
     ctx.stats.dodges += 1;
     ring(ctx.fx, hx, hy, "#00f0ff", 0.6);
@@ -126,8 +127,8 @@ export function knockDown(attacker: Fighter, target: Fighter, ctx: CombatContext
   shake(ctx.camera, 9);
 }
 
-const HIT_HEIGHT: Record<BasicMove, number> = { jab: 165, hook: 160, uppercut: 190, kick: 185, sweep: 30, airkick: 175, grab: 150, hadouken: 140 };
-const POWER: Record<BasicMove, number> = { jab: 0.6, hook: 1, uppercut: 1.1, kick: 1, sweep: 0.8, airkick: 1, grab: 0.5, hadouken: 1.6 };
+const HIT_HEIGHT: Record<BasicMove, number> = { jab: 165, hook: 160, uppercut: 190, kick: 185, sweep: 30, airkick: 175, grab: 150, hadouken: 140, shoryuken: 205, ultra_hadouken: 140 };
+const POWER: Record<BasicMove, number> = { jab: 0.6, hook: 1, uppercut: 1.1, kick: 1, sweep: 0.8, airkick: 1, grab: 0.5, hadouken: 1.6, shoryuken: 2.2, ultra_hadouken: 2.6 };
 
 /** Hand offsets (canvas px from body centre / feet) where the energy ball is released. */
 export const FIREBALL_HAND = { dx: 104, dy: -140 };
@@ -139,17 +140,21 @@ export function updateProjectiles(ctx: CombatContext, fighters: Fighter[], dt: n
     p.x += p.vx * dt;
     const target = fighters.find((f) => f !== p.owner);
     if (!target) return false;
-    if (Math.random() < 0.7) burst(ctx.fx, p.x - Math.sign(p.vx) * 26, p.y + (Math.random() - 0.5) * 30, SPECIAL_SPARKS[p.owner.id], 1, 70, 0);
-    if (Math.abs(target.x - p.x) < 58 || Math.sign(target.x - p.x) !== Math.sign(p.vx)) {
-      const colors = SPECIAL_SPARKS[p.owner.id];
+    const isUltra = p.kind !== "hadouken";
+    const radius = p.kind === "fatality" ? 112 : isUltra ? 72 : 30;
+    const colors = isUltra ? ULTRA_COLORS[p.owner.id].sparks : SPECIAL_SPARKS[p.owner.id];
+    if (Math.random() < (isUltra ? 0.95 : 0.7)) burst(ctx.fx, p.x - Math.sign(p.vx) * radius, p.y + (Math.random() - 0.5) * radius, colors, isUltra ? 3 : 1, isUltra ? 150 : 70, 0);
+    if (Math.abs(target.x - p.x) < radius + 28 || Math.sign(target.x - p.x) !== Math.sign(p.vx)) {
       target.invuln = 0;
       if (target.state === "grabbed" && target.grabPartner) { target.grabPartner.grabPartner = null; target.grabPartner = null; }
-      if (target.state === "knockdown") { target.flash = 0.2; ctx.sound(1.6); }
-      else reactToContact(p.owner, target, "hit", 1.6, 0.5, ctx, colors, GROUND_Y - p.y);
-      burst(ctx.fx, p.x, p.y, colors, 26, 380);
-      ring(ctx.fx, p.x, p.y, colors[0], 1.6);
-      flash(ctx.fx, 0.35, colors[0]);
-      applyDamage(ctx.settings, { attacker: p.owner, target, amount: p.damage, source: "gift", outcome: "hit" });
+      if (target.state === "knockdown") { target.flash = 0.2; ctx.sound(isUltra ? 2.6 : 1.6, p.owner.id, "special-impact"); }
+      else reactToContact(p.owner, target, "hit", isUltra ? 2.6 : 1.6, 0.5, ctx, colors, GROUND_Y - p.y, "special-impact");
+      burst(ctx.fx, p.x, p.y, colors, isUltra ? 64 : 26, isUltra ? 620 : 380);
+      ring(ctx.fx, p.x, p.y, colors[0], isUltra ? 2.8 : 1.6);
+      flash(ctx.fx, isUltra ? 0.9 : 0.35, colors[0]);
+      applyDamage(ctx.settings, { attacker: p.owner, target, amount: p.damage, source: p.kind === "fatality" ? "fatality" : "gift", outcome: "hit" });
+      if (isUltra) knockDown(p.owner, target, ctx, 430, -540, 1.8);
+      if (p.kind === "fatality") ctx.onFatalityHit(p.owner.id);
       return false;
     }
     return p.x > -80 && p.x < 1040;
@@ -160,7 +165,9 @@ export function updateProjectiles(ctx: CombatContext, fighters: Fighter[], dt: n
 export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: number) {
   if (f.state !== "attack" || !f.move) return;
   const def = MOVES[f.move];
-  const step = dt * ctx.settings.animation_speed;
+  // Gift specials retain their authored cinematic timing; only ordinary combat follows the speed control.
+  const scriptedGiftMove = f.move === "hadouken" || f.move === "shoryuken" || f.move === "ultra_hadouken";
+  const step = dt * (scriptedGiftMove ? 1 : ctx.settings.animation_speed);
   f.moveTime += step;
   const t = f.moveTime;
 
@@ -168,9 +175,11 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
   if ((f.move === "jab" || f.move === "hook") && t > 0.08 && t < 0.22) f.x += f.facing * 55 * dt;
   if (f.move === "kick" && t > 0.1 && t < 0.24) f.x += f.facing * 30 * dt;
   if (f.move === "sweep" && t > 0.1 && t < 0.26) f.x += f.facing * 45 * dt;
-  // While charging, open space so the energy ball is seen travelling (attacker slides back; if cornered, the opponent is pushed).
-  if (f.move === "hadouken" && t < HADOUKEN_RELEASE) {
-    const need = 260 - Math.abs(other.x - f.x);
+  const projectileMove = f.move === "hadouken" || f.move === "ultra_hadouken";
+  const releaseAt = f.move === "ultra_hadouken" ? ULTRA_RELEASE : HADOUKEN_RELEASE;
+  // While charging, open space so every energy ball is seen crossing the arena.
+  if (projectileMove && t < releaseAt) {
+    const need = (f.move === "ultra_hadouken" ? 500 : 260) - Math.abs(other.x - f.x);
     if (need > 0) {
       const move = Math.min(need, 900 * dt);
       const nx = Math.max(70, Math.min(890, f.x - f.facing * move));
@@ -179,11 +188,12 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
       if (rest > 0 && other.state !== "grabbed") other.x = Math.max(70, Math.min(890, other.x + f.facing * rest));
     }
   }
-  if (f.move === "hadouken" && f.special && t >= HADOUKEN_RELEASE && t - step < HADOUKEN_RELEASE) {
-    ctx.projectiles.push({ owner: f, x: f.x + f.facing * FIREBALL_HAND.dx, y: GROUND_Y + FIREBALL_HAND.dy, vx: f.facing * 520, age: 0, damage: f.special.damage });
+  if (projectileMove && f.special && t >= releaseAt && t - step < releaseAt) {
+    const kind = f.special.kind === "fatality" ? "fatality" : f.move === "ultra_hadouken" ? "ultra_hadouken" : "hadouken";
+    ctx.projectiles.push({ owner: f, x: f.x + f.facing * FIREBALL_HAND.dx, y: GROUND_Y + FIREBALL_HAND.dy, vx: f.facing * (kind === "hadouken" ? 520 : 760), age: 0, damage: f.special.damage, kind });
     f.special = null;
-    ctx.sound(1.4);
-    shake(ctx.camera, 4);
+    ctx.sound(kind === "hadouken" ? 1.4 : 2.6, f.id, "special-start");
+    shake(ctx.camera, kind === "hadouken" ? 4 : 12);
   }
   if (f.move === "airkick") f.vx = t > AIRKICK_AIR[0] && t < AIRKICK_AIR[1] - 0.12 ? f.facing * 290 : 0;
 
@@ -202,20 +212,24 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
         f.moveTime = Math.max(f.moveTime, def.duration - 0.35);
       }
     } else if (distance <= def.maxRange && other.state !== "knockdown" && !(isAirborne(other) && !reachesAir)) {
-      const outcome = contactOutcome(other, def.blockable);
+      const giftShoryuken = f.move === "shoryuken" && f.special?.kind === "shoryuken" ? f.special : null;
+      if (giftShoryuken) other.invuln = 0;
+      const outcome = giftShoryuken ? "hit" : contactOutcome(other, def.blockable);
       f.ai.lastOutcome = outcome;
       const antiAir = f.move === "uppercut" && isAirborne(other);
       if (outcome === "hit" && (def.knockdown || antiAir)) {
         // Sweep trips the target; an uppercut catches a jump-in out of the air.
-        ctx.sound(1);
-        burst(ctx.fx, other.x - f.facing * 20, GROUND_Y - HIT_HEIGHT[f.move], ["#ff006e", "#ffffff", "#ffe600"], 14, 300);
-        ring(ctx.fx, other.x - f.facing * 20, GROUND_Y - HIT_HEIGHT[f.move], "#ff006e", 1.1);
+        const hitColors = giftShoryuken ? SHORYUKEN_COLORS[f.id].sparks : ["#ff006e", "#ffffff", "#ffe600"];
+        ctx.sound(giftShoryuken ? 2.2 : 1, f.id, giftShoryuken ? "special-impact" : "basic");
+        burst(ctx.fx, other.x - f.facing * 20, GROUND_Y - HIT_HEIGHT[f.move], hitColors, giftShoryuken ? 36 : 14, giftShoryuken ? 520 : 300);
+        ring(ctx.fx, other.x - f.facing * 20, GROUND_Y - HIT_HEIGHT[f.move], hitColors[0], giftShoryuken ? 2.1 : 1.1);
         if (other.move === "airkick") { other.move = null; other.y = Math.min(other.y, other.oy); }
-        knockDown(f, other, ctx, antiAir ? 260 : 120, antiAir ? -520 : -210);
+        knockDown(f, other, ctx, giftShoryuken ? 360 : antiAir ? 260 : 120, giftShoryuken ? -660 : antiAir ? -520 : -210, giftShoryuken ? 1.7 : 1.35);
       } else {
         reactToContact(f, other, outcome, POWER[f.move], def.stun, ctx, ["#ff006e", "#ffffff", "#ffe600"], HIT_HEIGHT[f.move]);
       }
-      applyDamage(ctx.settings, { attacker: f, target: other, amount: damageFor(f.move, ctx.settings), source: "auto", outcome });
+      applyDamage(ctx.settings, { attacker: f, target: other, amount: giftShoryuken?.damage ?? damageFor(f.move, ctx.settings), source: giftShoryuken ? "gift" : "auto", outcome });
+      if (giftShoryuken) f.special = null;
     } else {
       f.ai.lastOutcome = null;
     }
@@ -249,6 +263,7 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
       return;
     }
     f.combo = [];
+    f.special = null;
     f.vx = 0;
     setState(f, "idle");
     f.ai.cooldown = Math.max(f.ai.cooldown, (f.ai.lastOutcome === "block" ? 0.45 : 0.18) + ctx.settings.recovery_ms / 2000);

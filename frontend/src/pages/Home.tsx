@@ -15,13 +15,22 @@ import { DEFAULT_LIVE_CONFIG, fetchLiveConfig, fetchLiveEvents, fetchLiveStatus,
 import type { DemoGiftCreate, GiftEvent, LiveConfig, LiveStatus } from "@/lib/live";
 
 type Screen = "menu" | "arena";
+type UltraScore = Record<CharacterId, number>;
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+const ULTRA_GOAL = 20;
 
 const EMPTY_STATS = emptyStats();
 
 function readWins(): Record<CharacterId, number> {
   try { return { lula: 0, flavio: 0, ...(JSON.parse(localStorage.getItem("planalto-wins") ?? "{}") as Partial<Record<CharacterId, number>>) }; } catch { return { lula: 0, flavio: 0 }; }
+}
+
+function readUltraScore(): UltraScore {
+  try {
+    const stored = JSON.parse(localStorage.getItem("planalto-ultra-dispute") ?? "{}") as Partial<UltraScore>;
+    return { lula: Math.min(ULTRA_GOAL, Math.max(0, stored.lula ?? 0)), flavio: Math.min(ULTRA_GOAL, Math.max(0, stored.flavio ?? 0)) };
+  } catch { return { lula: 0, flavio: 0 }; }
 }
 
 function connectionLabel(status: LiveStatus, config: LiveConfig) {
@@ -40,6 +49,8 @@ export default function Home() {
   const [liveConfig, setLiveConfig] = useState<LiveConfig>(DEFAULT_LIVE_CONFIG);
   const [hud, setHud] = useState<HudSnapshot | null>(null);
   const [wins, setWins] = useState<Record<CharacterId, number>>(readWins);
+  const [ultraScore, setUltraScore] = useState<UltraScore>(readUltraScore);
+  const [fatalityWinner, setFatalityWinner] = useState<CharacterId | null>(null);
   const [lastGift, setLastGift] = useState<GiftEvent | null>(null);
   const [recent, setRecent] = useState<GiftEvent[]>([]);
   const [giftsThisFight, setGiftsThisFight] = useState(0);
@@ -49,6 +60,9 @@ export default function Home() {
   const engineRef = useRef<ArenaEngine | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
   const pendingRef = useRef<GiftEvent[]>([]);
+  const ultraScoreRef = useRef<UltraScore>(ultraScore);
+  const fatalityLockRef = useRef(false);
+  const fatalityEventsRef = useRef<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const right: CharacterId = left === "lula" ? "flavio" : "lula";
   const { events: socketEvents, status: socketStatus } = useGiftSocket("main-arena");
@@ -71,6 +85,19 @@ export default function Home() {
     setLastGift(event);
     setRecent((current) => [event, ...current.filter((item) => item.event_id !== event.event_id)].slice(0, 5));
     setGiftsThisFight((count) => count + event.quantity);
+    if (!fatalityLockRef.current) {
+      const id = event.benefited_character;
+      const previous = ultraScoreRef.current[id];
+      const next: UltraScore = { ...ultraScoreRef.current, [id]: Math.min(ULTRA_GOAL, previous + event.quantity) };
+      ultraScoreRef.current = next;
+      setUltraScore(next);
+      localStorage.setItem("planalto-ultra-dispute", JSON.stringify(next));
+      if (previous < ULTRA_GOAL && next[id] >= ULTRA_GOAL) {
+        fatalityLockRef.current = true;
+        fatalityEventsRef.current.add(event.id);
+        setFatalityWinner(id);
+      }
+    }
   }, []);
 
   useEffect(() => { [...socketEvents].reverse().forEach(receiveGift); }, [socketEvents, receiveGift]);
@@ -78,7 +105,12 @@ export default function Home() {
   /** Fires a gift's effect (boost / hadouken / domain) right after its thank-you cutscene. */
   const applyGift = useCallback((event: GiftEvent) => {
     setCaptions((current) => current.filter((item) => item.id !== event.id));
-    if (engineRef.current) engineRef.current.triggerSpecial(event);
+    const fatality = fatalityEventsRef.current.has(event.id);
+    if (engineRef.current) {
+      fatalityEventsRef.current.delete(event.id);
+      if (fatality) engineRef.current.triggerFatality(event.benefited_character, event.username);
+      else engineRef.current.triggerSpecial(event);
+    }
     else pendingRef.current.push(event);
   }, []);
 
@@ -86,20 +118,34 @@ export default function Home() {
     if (screen !== "arena" || !canvasRef.current) return undefined;
     const engine = new ArenaEngine(canvasRef.current, liveConfig.combat, left, right, {
       onHud: setHud,
-      onRoundStart: () => { setRoundResult(null); setGiftsThisFight(0); },
+      onRoundStart: () => {
+        setRoundResult(null);
+        setGiftsThisFight(0);
+        if (fatalityLockRef.current && ultraScoreRef.current.lula === 0 && ultraScoreRef.current.flavio === 0) fatalityLockRef.current = false;
+        if (!fatalityLockRef.current) setFatalityWinner(null);
+      },
       onRoundEnd: (winner) => {
         setRoundResult(winner ? `${CHARACTERS[winner].name} VENCEU A RODADA` : "EMPATE");
         if (winner) setWins((current) => { const next = { ...current, [winner]: current[winner] + 1 }; localStorage.setItem("planalto-wins", JSON.stringify(next)); return next; });
       },
+      onFatalityComplete: () => {
+        const reset = { lula: 0, flavio: 0 };
+        ultraScoreRef.current = reset;
+        setUltraScore(reset);
+        localStorage.setItem("planalto-ultra-dispute", JSON.stringify(reset));
+      },
     });
     engineRef.current = engine;
-    pendingRef.current.splice(0).forEach((event) => engine.triggerSpecial(event));
+    pendingRef.current.splice(0).forEach((event) => {
+      if (fatalityEventsRef.current.delete(event.id)) engine.triggerFatality(event.benefited_character, event.username);
+      else engine.triggerSpecial(event);
+    });
     return () => { engine.destroy(); engineRef.current = null; };
     // Settings are pushed via setSettings; only fighters/screen recreate the engine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, left]);
 
-  useEffect(() => { engineRef.current?.setPaused(paused); }, [paused]);
+  useEffect(() => { engineRef.current?.setPaused(paused || captions.length > 0); }, [paused, captions.length, screen]);
   useEffect(() => { engineRef.current?.setVolume(soundOn ? volume : 0); }, [soundOn, volume, screen]);
 
   const status: LiveStatus = statusQuery.data ?? socketStatus;
@@ -150,7 +196,7 @@ export default function Home() {
           <h1 data-testid="game-title">BRASIL<br /><span>FIGHT ARENA</span></h1>
           <div className="live-mode-card arcade-panel" data-testid="tiktok-live-mode-card">
             <div className="live-mode-head"><span className="live-dot-icon"><Radio size={22} /></span><div><b data-testid="tiktok-live-mode-label">TIKTOK LIVE</b><small data-testid="tiktok-live-mode-status">{connection.text}</small></div></div>
-            <p data-testid="tiktok-live-mode-subtitle">Os lutadores trocam golpes sozinhos. Rosa = +dano, Coração = +defesa, Rosquinha = Hadouken e Leão = Expansão de Domínio!</p>
+            <p data-testid="tiktok-live-mode-subtitle">Rosa = +dano, Coração = +defesa, Rosquinha = Shoryuken, Leão = Domínio e Universo = Ultra Hadouken. O primeiro time com 20 presentes ativa o Fatality!</p>
             <Button type="button" className="start-button live-enter-button" data-testid="enter-live-arena-button" onClick={enterArena}><span>ENTRAR NA ARENA LIVE</span><ChevronRight size={22} /></Button>
             {liveConfig.integration_mode === "demo" || connection.tone !== "ok"
               ? <small className="live-mode-note" data-testid="demo-mode-note">Sem conexão real com o TikTok: a arena abre em modo demonstração e os presentes são simulados pelo painel ADMIN.</small>
@@ -163,13 +209,30 @@ export default function Home() {
         <section className="fight-layout vertical-fight-layout" data-testid="gameplay-screen">
           <div className={`stream-composition backdrop-${liveConfig.combat.backdrop}`} data-testid="vertical-stream-composition">
             <div className="broadcast-top-bar" data-testid="broadcast-top-bar">
-              {topPlayer(left, "left")}
-              <div className="broadcast-round">
-                <span data-testid="broadcast-round-label">ROUND {String(hud?.round ?? 1).padStart(2, "0")}</span>
-                <strong className={`tone-${connection.tone}`} data-testid="broadcast-live-status"><Radio size={11} /> {connection.tone === "demo" ? "DEMO" : connection.tone === "ok" ? "LIVE" : "OFFLINE"}</strong>
-                <em data-testid="broadcast-last-gifter">{lastGift ? `@${lastGift.username}` : "AGUARDANDO"}</em>
+              <div className={`ultra-dispute ${fatalityWinner ? "is-fatality" : ""}`} data-testid="ultra-special-dispute">
+                <div className="ultra-dispute-title" data-testid="ultra-special-dispute-title">
+                  <span>ULTRA ESPECIAL</span><b>DISPUTA DE PRESENTES</b>
+                  {fatalityWinner && <em data-testid="fatality-definitivo-banner">FATALITY DEFINITIVO · {CHARACTERS[fatalityWinner].name}</em>}
+                </div>
+                <div className="ultra-dispute-track" data-testid="ultra-special-dispute-bar">
+                  <div className="ultra-team ultra-team-blue"><i style={{ width: `${(ultraScore.flavio / ULTRA_GOAL) * 100}%` }} /></div>
+                  <strong data-testid="ultra-special-vs">VS</strong>
+                  <div className="ultra-team ultra-team-red"><i style={{ width: `${(ultraScore.lula / ULTRA_GOAL) * 100}%` }} /></div>
+                </div>
+                <div className="ultra-dispute-scores">
+                  <span data-testid="ultra-blue-score">TIME AZUL <b>{ultraScore.flavio}/{ULTRA_GOAL}</b></span>
+                  <span data-testid="ultra-red-score"><b>{ultraScore.lula}/{ULTRA_GOAL}</b> TIME VERMELHO</span>
+                </div>
               </div>
-              {topPlayer(right, "right")}
+              <div className="broadcast-match-row" data-testid="broadcast-match-row">
+                {topPlayer(left, "left")}
+                <div className="broadcast-round">
+                  <span data-testid="broadcast-round-label">ROUND {String(hud?.round ?? 1).padStart(2, "0")}</span>
+                  <strong className={`tone-${connection.tone}`} data-testid="broadcast-live-status"><Radio size={11} /> {connection.tone === "demo" ? "DEMO" : connection.tone === "ok" ? "LIVE" : "OFFLINE"}</strong>
+                  <em data-testid="broadcast-last-gifter">{lastGift ? `@${lastGift.username}` : "AGUARDANDO"}</em>
+                </div>
+                {topPlayer(right, "right")}
+              </div>
             </div>
             <div className="arcade-frame">
               <div className="canvas-wrap">
@@ -178,7 +241,7 @@ export default function Home() {
                 {roundResult && <div className="round-result" data-testid="round-result-banner">{roundResult}</div>}
               </div>
               <div className="hud-strip">
-                <span data-testid="fight-mode-indicator">{hud?.domain ? `DOMÍNIO: ${hud.domain}` : hud && hud.specials > 0 ? `ESPECIAIS NA FILA: ${hud.specials}` : "LUTA AUTOMÁTICA"}</span>
+                <span data-testid="fight-mode-indicator">{fatalityWinner ? `FATALITY DEFINITIVO: ${CHARACTERS[fatalityWinner].name}` : hud?.domain ? `DOMÍNIO: ${hud.domain}` : hud && hud.specials > 0 ? `ESPECIAIS NA FILA: ${hud.specials}` : "LUTA AUTOMÁTICA"}</span>
                 <span data-testid="knockdown-count">QUEDAS <b>{hud?.stats.knockdowns ?? 0}</b></span>
                 <span data-testid="timer-display">TEMPO <b>{Math.ceil(hud?.timeLeft ?? liveConfig.combat.fight_duration_sec)}</b></span>
               </div>
@@ -187,7 +250,7 @@ export default function Home() {
               <div className="gift-callout">
                 <span data-testid="last-gift-label"><b className="gift-callout-icon" data-testid="last-gift-icon">{lastGift ? giftIcon(lastGift.gift_id) : "🎁"}</b>{lastGift ? `${lastGift.gift_name.toUpperCase()}${lastGift.quantity > 1 ? ` x${lastGift.quantity}` : ""}` : "AGUARDANDO PRESENTES"}{lastGift?.source === "demo" && <i className="demo-chip" data-testid="last-gift-simulated-chip">SIMULADO</i>}</span>
                 <small data-testid="last-gift-user">{lastGift ? `ENVIADO POR: @${lastGift.username}` : "NENHUM PRESENTE NESTA LUTA"}</small>
-                <strong data-testid="last-gift-action">{lastGift ? giftEffectLabel(lastGift) : "🌹 DANO · 💗 DEFESA · 🍩 HADOUKEN · 🦁 DOMÍNIO"}</strong>
+                <strong data-testid="last-gift-action">{lastGift ? giftEffectLabel(lastGift) : "🌹 DANO · 💗 DEFESA · 🍩 SHORYUKEN · 🦁 DOMÍNIO · 🌌 ULTRA"}</strong>
                 <em data-testid="last-gift-note">{lastGift ? `OBRIGADO, @${lastGift.username}!` : "ENVIE PRESENTES E MUDE A LUTA"}</em>
               </div>
               <div className="broadcast-stats">

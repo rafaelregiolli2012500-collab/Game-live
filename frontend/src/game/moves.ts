@@ -29,10 +29,15 @@ export const MOVES: Record<BasicMove, MoveDef> = {
   grab: { duration: 1.55, impacts: [0.22], minRange: 0, maxRange: 128, blockable: false, damageKey: "common", stun: 0 },
   // Gift special: no melee contact — the energy ball (combat.updateProjectiles) carries the damage.
   hadouken: { duration: 0.9, impacts: [], minRange: 0, maxRange: 2000, blockable: false, damageKey: "combo", stun: 0 },
+  // Gift special modelled on the five-frame reference: crouch → charge → rising fist → descent → landing.
+  shoryuken: { duration: 1.16, impacts: [0.32], minRange: 0, maxRange: 165, blockable: false, damageKey: "combo", stun: 0, knockdown: true },
+  // Giant projectile: long charge and full-map release; damage travels with the orb.
+  ultra_hadouken: { duration: 1.7, impacts: [], minRange: 0, maxRange: 2000, blockable: false, damageKey: "combo", stun: 0 },
 };
 
 /** Moment (s) the hadouken energy ball leaves the hands. */
 export const HADOUKEN_RELEASE = 0.36;
+export const ULTRA_RELEASE = 0.72;
 
 export const COMBOS: BasicMove[][] = [
   ["jab", "jab"],
@@ -112,6 +117,23 @@ const MOVE_CLIPS: Record<BasicMove, Clip> = {
   hadouken: { duration: 0.9, keys: [
     { at: 0, pose: "idle", ox: 0 }, { at: 0.05, pose: "charge", ox: -4, sy: 1 }, { at: 0.3, ox: -10, sy: 0.98 },
     { at: 0.34, pose: "fireball", ox: 6, sy: 1 }, { at: 0.42, ox: 14 }, { at: 0.7, ox: 10 }, { at: 0.74, pose: "idle", ox: 4 }, { at: 0.9, ox: 0 },
+  ] },
+  // Five stages from the supplied Shoryuken sheet: deep setup, coiled rise, vertical impact, descent, stance.
+  shoryuken: { duration: 1.16, keys: [
+    { at: 0, pose: "crouch", ox: -4, oy: 0, sy: 0.94 },
+    { at: 0.1, pose: "charge", ox: -8, oy: 0, sy: 0.98 },
+    { at: 0.2, pose: "uppercut", ox: 10, oy: -18, sy: 1 },
+    { at: 0.42, pose: "uppercut", ox: 24, oy: -142, rot: -0.04 },
+    { at: 0.58, pose: "jump", ox: 30, oy: -178, rot: -0.02 },
+    { at: 0.82, pose: "jump", ox: 24, oy: -70, rot: 0 },
+    { at: 0.94, pose: "crouch", ox: 12, oy: 0, sy: 0.95 },
+    { at: 1.04, pose: "idle", ox: 4, oy: 0, sy: 1 },
+    { at: 1.16, ox: 0, oy: 0 },
+  ] },
+  ultra_hadouken: { duration: 1.7, keys: [
+    { at: 0, pose: "crouch", ox: -4, sy: 0.95 }, { at: 0.08, pose: "charge", ox: -10, sy: 1 },
+    { at: 0.5, pose: "charge", ox: -18, sy: 0.98 }, { at: 0.68, pose: "fireball", ox: 8, sy: 1 },
+    { at: 0.82, ox: 24 }, { at: 1.34, ox: 14 }, { at: 1.45, pose: "idle", ox: 5 }, { at: 1.7, ox: 0 },
   ] },
 };
 

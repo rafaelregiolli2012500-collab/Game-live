@@ -1,0 +1,98 @@
+{
+  "iteration": 4,
+  "mode": "generate",
+  "summary": "Covered the v6 acceptance matrix (8 criteria) with 11 browser checks (one existing criterion check already covered by prior leao-domain-expansion / start-screen-opens-arena was reused; the donut criterion check was rewritten because the old 'rosquinha-hadouken-damage' check asserted the pre-v6 30-damage hadouken behaviour, which is now superseded by the 45-damage Shoryuken). All 12 checks pass, including a rerun of start-screen-opens-arena against the public preview URL. No backend test files were added: every v6 criterion is only observable/triggerable through the admin simulate-gift controls and the arena HUD (rules, dispute score, cutscenes, damage, audio) - there is no criterion whose evidence is purely a raw API response independent of the UI.",
+  "passed": 12,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [
+    "Removed the outdated rosquinha-hadouken-damage check/artifacts (asserted stale 30-dmg hadouken behaviour for donut); replaced by rosquinha-shoryuken-both-fighters which matches the current 45-dmg Shoryuken spec for both fighters."
+  ],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "A cutscene de agradecimento pausa totalmente a batalha e o efeito só começa depois que ela some",
+      "name": "cutscene-pauses-battle-and-resumes-state",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Scenario A (running): during thanks-cutscene, timer-display and broadcast-right-hp stayed frozen at their pre-gift values for 1.2s; after cutscene hid, HP changed (effect applied) and pause-overlay stayed hidden (fight kept running). Scenario B (manually paused): pause-game-button clicked first (pause-overlay visible); same donut gift shown via cutscene; after it hid, pause-overlay was still visible and timer/HP were unchanged (previous manual pause fully restored, effect not yet applied while paused). No console errors."
+    },
+    {
+      "criterion": "A disputa Ultra soma cada unidade ao time beneficiado e persiste entre rounds",
+      "name": "ultra-dispute-accumulates-and-persists",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Cleared planalto-ultra-dispute, simulated Rosa x3 for Flávio (simulate-quantity-input=3) via simulate-gift-button; after cutscene closed, ultra-blue-score read '3/20'. restart-round-button clicked -> still '3/20'. Full page reload + re-enter arena -> still '3/20' (read back from localStorage). No console errors."
+    },
+    {
+      "criterion": "O primeiro time a 20 executa o Fatality Definitivo",
+      "name": "fatality-at-20-triggers-and-resets",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Simulated Coração x20 for Lula; ultra-red-score reached '20/20' and fatality-definitivo-banner showed 'FATALITY DEFINITIVO'. After the Fatality resolved, broadcast-right-hp (Flávio) dropped to 0, fight-mode-indicator read 'FATALITY DEFINITIVO: LULA', and both ultra-red-score/ultra-blue-score reset to '0/20'. No console errors."
+    },
+    {
+      "criterion": "Rosquinha ativa o novo Shoryuken para ambos os lutadores",
+      "name": "rosquinha-shoryuken-both-fighters",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Donut for Lula dropped Flávio's HP by exactly 45; donut for Flávio dropped Lula's HP by exactly 45; stat-shoryukens increased by 2 total (one per use). (Supersedes the removed rosquinha-hadouken-damage artifact which tested the old -30 hadouken behaviour.) No console errors."
+    },
+    {
+      "criterion": "Universo TikTok ativa o Ultra Hadouken gigante configurável",
+      "name": "universe-ultra-hadouken-rule-and-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "ADMIN gift-rule-universe row visible showing '44.999' reference value and gift-rule-universe-special = 'ultra_hadouken'. Simulated quick-gift-universe-button for Lula; after cutscene closed, Flávio's HP dropped by exactly 240 (no boosts active) and stat-ultras incremented by 1. No console errors."
+    },
+    {
+      "criterion": "Leão continua ativando a Expansão de Domínio existente",
+      "name": "leao-domain-expansion",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran existing check (unchanged by v6): sending Leão shows fight-mode-indicator 'DOMÍNIO: ARENA SANGRENTA' and applies domain damage within expected bounds, confirming Leão's effect was not replaced by the new Universo Ultra."
+    },
+    {
+      "criterion": "Os quatro áudios enviados estão integrados sem erros",
+      "name": "audio-assets-integrated-without-errors",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Switched combat-mode-select to 'normal' (basic CPU punches run), then triggered donut (Shoryuken) and lion (Domain) gifts for Lula. No /audio/* network response returned >=400 and no page-level errors mentioning audio/mp3 were raised across punch.mp3/flashbang.mp3/faah.mp3/lula-special.mp3 usage paths. Direct GETs also independently confirmed 200 for all four files (/audio/punch.mp3, /audio/flashbang.mp3, /audio/faah.mp3, /audio/lula-special.mp3)."
+    },
+    {
+      "criterion": "The start screen opens the TikTok LIVE arena without login (regression, v5 baseline)",
+      "name": "start-screen-opens-arena",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran locally and against the public preview URL https://live-game-preview-1.preview.emergentagent.com; both show gameplay-screen with no login gate. No console errors."
+    },
+    {
+      "criterion": "Every enabled gift shows a thank-you cutscene before applying its effect (regression, v5 baseline)",
+      "name": "thanks-cutscene-shows-for-gift",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Rosa for Lula via admin shows thanks-cutscene with OBRIGADO + username + lula art, then hides before effect. No console errors."
+    },
+    {
+      "criterion": "Rosa grants a timed damage boost (regression, v5 baseline)",
+      "name": "rosa-damage-boost-chip",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "broadcast-left-damage-boost chip shows +10% with countdown after sending Rosa for Lula. No console errors."
+    },
+    {
+      "criterion": "Coração grants a timed defense boost (regression, v5 baseline)",
+      "name": "coracao-defense-boost-chip",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "broadcast-right-defense-boost chip shows +10% with countdown after sending Coração for Flávio. No console errors."
+    },
+    {
+      "criterion": "Restarting the round clears active boosts (regression, v5 baseline)",
+      "name": "boosts-reset-on-restart",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "All four boost-chip testids have count 0 after restart-round-button is clicked following a Rosa gift. No console errors."
+    }
+  ]
+}

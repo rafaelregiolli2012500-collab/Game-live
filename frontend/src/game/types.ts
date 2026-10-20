@@ -7,9 +7,10 @@ export type Pose =
   | "punch" | "hook" | "uppercut" | "kick" | "airkick" | "sweep" | "grab"
   | "charge" | "fireball" | "mudra"
   | "block" | "hurt" | "stun" | "knockdown" | "victory";
-/** Moves from the reference movement sheet; "hadouken" is the gift-only special (never chosen by the AI). */
-export type BasicMove = "jab" | "hook" | "uppercut" | "kick" | "sweep" | "airkick" | "grab" | "hadouken";
-export type FighterState = "idle" | "walk" | "attack" | "block" | "dodge" | "hit" | "stun" | "grabbed" | "knockdown" | "victory" | "domain" | "frozen";
+/** Basic attacks plus gift-only scripted moves (never selected by the AI). */
+export type BasicMove = "jab" | "hook" | "uppercut" | "kick" | "sweep" | "airkick" | "grab" | "hadouken" | "shoryuken" | "ultra_hadouken";
+export type GiftAttackKind = "hadouken" | "shoryuken" | "ultra_hadouken" | "fatality";
+export type FighterState = "idle" | "walk" | "attack" | "block" | "dodge" | "hit" | "stun" | "grabbed" | "knockdown" | "victory" | "domain" | "frozen" | "special";
 
 export interface AiMemory {
   cooldown: number;
@@ -54,7 +55,7 @@ export interface Fighter {
   invuln: number;
   grabPartner: Fighter | null;
   /** Gift special in progress: damage carried by the energy ball once released. */
-  special: { damage: number; username: string } | null;
+  special: { kind: GiftAttackKind; damage: number; username: string } | null;
   /** Gift buffs (percent + seconds left); both reset when a new round starts. */
   dmgBoost: Boost;
   defBoost: Boost;
@@ -64,7 +65,7 @@ export interface Fighter {
 }
 
 export type HitOutcome = "hit" | "block" | "dodge";
-export type DamageSource = "auto" | "gift" | "admin";
+export type DamageSource = "auto" | "gift" | "admin" | "fatality";
 
 export interface CombatStats {
   jab: number;
@@ -75,6 +76,9 @@ export interface CombatStats {
   airkick: number;
   grab: number;
   hadouken: number;
+  shoryuken: number;
+  ultra_hadouken: number;
+  fatalities: number;
   domains: number;
   throws: number;
   combos: number;
@@ -89,6 +93,7 @@ export interface EngineCallbacks {
   onHud: (hud: HudSnapshot) => void;
   onRoundEnd: (winner: CharacterId | null, round: number) => void;
   onRoundStart: (round: number) => void;
+  onFatalityComplete: (winner: CharacterId) => void;
 }
 
 export interface HudSnapshot {

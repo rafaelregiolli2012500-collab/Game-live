@@ -75,7 +75,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
     a.pose = t < 0.15 ? "idle" : "mudra";
     a.squash = 1 - 0.015 * Math.sin(t * 22);
     if (t > 0.3 && t < 1.5 && Math.random() < 0.8) burst(ctx.fx, a.x + (Math.random() - 0.5) * 140, GROUND_Y - Math.random() * 240, colors, 2, 90, -240);
-    if (t > 1.5 && t - dt <= 1.5) { flash(ctx.fx, 0.5, colors[0]); shake(ctx.camera, 8); ctx.sound(1.8); }
+    if (t > 1.5 && t - dt <= 1.5) { flash(ctx.fx, 0.5, colors[0]); shake(ctx.camera, 8); ctx.sound(1.8, a.id, "special-start"); }
   } else if (t < 4.6) {
     // Dash next to the frozen opponent, then chain the super combo.
     const target = v.x - a.facing * 96;
@@ -91,7 +91,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
       burst(ctx.fx, v.x - a.facing * 20, hy, colors, 14, 300);
       ring(ctx.fx, v.x - a.facing * 20, hy, colors[0], 1);
       shake(ctx.camera, 6);
-      ctx.sound(1.1);
+      ctx.sound(1.1, a.id, "special-impact");
       v.flash = 0.12;
       applyDamage(ctx.settings, { attacker: a, target: v, amount: per, source: "gift", outcome: "hit" });
     }
@@ -105,7 +105,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
   } else if (t < 5.7) {
     a.pose = t < 5.55 ? "fireball" : "idle";
     a.ox = t < 5.55 ? 10 : 0;
-    if (d.ballX === null && !d.finished) { d.ballX = a.x + a.facing * 104; ctx.sound(1.6); }
+    if (d.ballX === null && !d.finished) { d.ballX = a.x + a.facing * 104; }
     if (d.ballX !== null) {
       d.ballX += a.facing * 900 * dt;
       if (Math.random() < 0.9) burst(ctx.fx, d.ballX - a.facing * 30, GROUND_Y - 140, colors, 2, 80, 0);
@@ -119,7 +119,7 @@ export function updateDomain(d: Domain, ctx: CombatContext, dt: number): boolean
         ring(ctx.fx, v.x, GROUND_Y - 140, colors[0], 2);
         flash(ctx.fx, 0.6, colors[0]);
         shake(ctx.camera, 14);
-        ctx.sound(2);
+        ctx.sound(2, a.id, "special-impact");
       }
     }
   } else {
