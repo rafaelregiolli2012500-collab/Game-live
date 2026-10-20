@@ -1,0 +1,75 @@
+{
+  "iteration": 8,
+  "mode": "retest",
+  "summary": "Re-ran the full v9 acceptance suite from iteration 7 (no new criteria in this briefing). Backend pytest suite (4 tests, 3 files) re-run from scratch; all 7 persisted browser checks re-run BY NAME ONLY against saved URLs. All 8 artifacts passed with no code changes needed.",
+  "passed": 8,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Baseline demo arena remains usable without login and APIs expose v9 configuration",
+      "name": "test_tscheck_live_config_v9",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "pytest: GET /api/live/config -> 200; rules_version=7; universe rule animation_ms=4800, damage=240, special_move=ultra_hadouken (4 passed in 0.85s across the suite)."
+    },
+    {
+      "criterion": "Repeated gift batches preserve damage while accelerating the entire sequence",
+      "name": "test_tscheck_universe_ultra_damage_per_unit",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "pytest passed: 240 damage per unit confirmed via config/damage assertion against running server."
+    },
+    {
+      "criterion": "Baseline demo arena remains usable without login and APIs expose v9 configuration",
+      "name": "start-screen-opens-arena-public",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run against https://play-live-5.preview.emergentagent.com (persisted URL): start-screen visible with no login gate, enter-live-arena-button opens gameplay-screen with game-canvas visible."
+    },
+    {
+      "criterion": "Universo/Fatality runs a focused four-second charge cinematic before the beam",
+      "name": "ultra-four-second-charge-cinematic",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: AI+timer paused during charge for >=3000ms, broadcast-right-hp dropped to 360/600 after release (240 dmg), timer-display unchanged throughout pause window."
+    },
+    {
+      "criterion": "Ultra charge and release audio are synchronized to their phases",
+      "name": "ultra-charge-release-audio-synced",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: anime-powerup.mp3 started within charge phase, strong-energy-wave.mp3 started before the detected impact, no delayed playback."
+    },
+    {
+      "criterion": "Repeated gift batches preserve damage while accelerating the entire sequence",
+      "name": "universe-batch-2x-speed-preserves-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: quantity=2 batch showed data-playback-speed=2, HP dropped 600->360->120 (240 dmg/unit x2), strict serialization preserved."
+    },
+    {
+      "criterion": "Expanded normal-combat sound cues map to the intended exact frames",
+      "name": "normal-combat-sound-cues-expanded",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: punch.mp3/multiple-punches.mp3 alternation observed, struggle-stand.mp3 fired on knockdown landing."
+    },
+    {
+      "criterion": "Every queued gift has an audio notification before its thank-you cutscene",
+      "name": "gift-notification-before-thankyou-cutscene",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: two-note (660Hz/990Hz) notification preceded thanks-cutscene-user for each of two distinct gifts, no overlap."
+    },
+    {
+      "criterion": "Background music loops quietly and follows existing audio controls",
+      "name": "background-music-follows-sound-controls",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: oscillator voices start on arena entry, stop while muted, resume on unmute; music GainNode stays <=0.05 at 50% admin volume."
+    }
+  ]
+}

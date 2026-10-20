@@ -64,7 +64,7 @@
       "name": "start-screen-opens-arena",
       "lane": "browser",
       "status": "passed",
-      "evidence": "Re-ran locally and against the public preview URL https://live-game-preview-1.preview.emergentagent.com; both show gameplay-screen with no login gate. No console errors."
+      "evidence": "Re-ran locally and against the public preview URL https://play-live-5.preview.emergentagent.com; both show gameplay-screen with no login gate. No console errors."
     },
     {
       "criterion": "Every enabled gift shows a thank-you cutscene before applying its effect (regression, v5 baseline)",

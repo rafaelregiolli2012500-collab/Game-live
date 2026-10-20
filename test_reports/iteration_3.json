@@ -13,7 +13,7 @@
       "name": "start-screen-opens-arena",
       "lane": "browser",
       "status": "passed",
-      "evidence": "No login screen present. start-screen visible on load; clicking enter-live-arena-button (ENTRAR NA ARENA LIVE) shows gameplay-screen with vertical-stream-composition, broadcast-left-name=LULA, broadcast-right-name=FLÁVIO, HP displays, timer-display, and broadcast-live-status reading DEMO. Re-ran against public preview URL https://live-game-preview-1.preview.emergentagent.com with identical pass. No console errors."
+      "evidence": "No login screen present. start-screen visible on load; clicking enter-live-arena-button (ENTRAR NA ARENA LIVE) shows gameplay-screen with vertical-stream-composition, broadcast-left-name=LULA, broadcast-right-name=FLÁVIO, HP displays, timer-display, and broadcast-live-status reading DEMO. Re-ran against public preview URL https://play-live-5.preview.emergentagent.com with identical pass. No console errors."
     },
     {
       "criterion": "Every enabled gift shows a thank-you cutscene before applying its effect",

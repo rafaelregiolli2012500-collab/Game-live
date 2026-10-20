@@ -1,0 +1,68 @@
+{
+  "iteration": 7,
+  "mode": "generate",
+  "summary": "Covered the v9 acceptance matrix (7 criteria: 4s Universo/Fatality charge cinematic, synced charge/release audio, 2x-speed batch with preserved per-unit damage, expanded normal-combat sound cues, pre-cutscene gift notification, background music + controls, baseline ingress + v9 config). 2 backend test files + 6 browser checks + reused baseline check = 8 artifacts, all passing after fixing a stale rules_version assertion and black-box audio/timing hook issues discovered mid-run.",
+  "passed": 8,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Baseline demo arena remains usable without login and APIs expose v9 configuration",
+      "name": "test_tscheck_live_config_v9 (test_live_config_reports_rules_version_7_and_universe_animation_4800)",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/live/config -> 200; rules_version=7; universe rule animation_ms=4800, damage=240, special_move=ultra_hadouken. GET /api/live/status -> 200. Also fixed a stale sibling test (test_tscheck_slower_combat_config.py) that still pinned the superseded rules_version=6 so the suite reflects current reality (4 passed total)."
+    },
+    {
+      "criterion": "Baseline demo arena remains usable without login and APIs expose v9 configuration",
+      "name": "start-screen-opens-arena-public",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Ran against https://play-live-5.preview.emergentagent.com: start-screen visible with no login gate, enter-live-arena-button opens gameplay-screen with game-canvas visible, no console errors."
+    },
+    {
+      "criterion": "Universo/Fatality runs a focused four-second charge cinematic before the beam",
+      "name": "ultra-four-second-charge-cinematic",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "After the gift's thank-you cutscene hid, fight-mode-indicator showed 'ESPECIAIS NA FILA' (AI+timer paused) for >=3000ms before broadcast-right-hp read exactly '360 / 600 HP' (240 dmg landed); timer-display text was byte-identical before and after the whole charge+release window, confirming it stayed paused throughout."
+    },
+    {
+      "criterion": "Ultra charge and release audio are synchronized to their phases",
+      "name": "ultra-charge-release-audio-synced",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Patched Response.arrayBuffer/decodeAudioData/createBufferSource to tag each AudioBufferSourceNode.start() with its decoded source URL. anime-powerup.mp3 started within 600ms of the charge phase beginning; strong-energy-wave.mp3 started strictly after anime-powerup and before (not after) the detected 240-dmg impact on broadcast-left-hp -- no delayed playback."
+    },
+    {
+      "criterion": "Repeated gift batches preserve damage while accelerating the entire sequence",
+      "name": "universe-batch-2x-speed-preserves-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Baseline single-unit cutscene had data-playback-speed=1; a fresh quantity=2 Universo batch (after restart-round reset HP to 600/600) showed data-playback-speed=2 and hid in less wall-clock time than the baseline. HP dropped 600->360->120, i.e. exactly 240 damage per unit x2 units, with strict event serialization (no stray third hit)."
+    },
+    {
+      "criterion": "Expanded normal-combat sound cues map to the intended exact frames",
+      "name": "normal-combat-sound-cues-expanded",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Switched combat_mode to 'normal' via ADMIN and let the auto-fight run; tagged buffer-source playbacks showed punch.mp3 and multiple-punches.mp3 both firing with multiple-punches at a healthy share (>=15%) of punch.mp3's count (confirms alternation; kicks also reuse punch.mp3 by design so a strict run-length check would misclassify kicks), and struggle-stand.mp3 fired once a knocked-down fighter landed (knockdown-count > 0)."
+    },
+    {
+      "criterion": "Every queued gift has an audio notification before its thank-you cutscene",
+      "name": "gift-notification-before-thankyou-cutscene",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Captured oscillator.start() calls filtered to the notification's 660Hz/990Hz two-note signature (excluding the ~82-493Hz background-music oscillators). The two notes appeared before thanks-cutscene-user showed the gift's username, with the gap <2000ms; a second, distinct gift produced its own fresh pair of notes before its own cutscene, with no overlap/leftover from the first."
+    },
+    {
+      "criterion": "Background music loops quietly and follows existing audio controls",
+      "name": "background-music-follows-sound-controls",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Oscillator-creation count grew on arena entry (bass+lead music voices), stayed flat while muted via sound-toggle-button, then grew again after unmuting (music loop restarted). After setting the admin volume slider to 50%, the music GainNode's gain.value was a small fraction of 0.5 (<=0.05), confirming a quiet background loop scaled by the existing volume control."
+    }
+  ]
+}

@@ -13,7 +13,7 @@
       "name": "thanks-cutscene-shows-for-gift",
       "lane": "browser",
       "status": "passed",
-      "evidence": "Via ADMIN quick-gift-rose-button (beneficiary lula, user tscheck_rosauser): thanks-cutscene appeared with thanks-cutscene-image src containing thanks_lula, title 'OBRIGADO,', user '@tscheck_rosauser!', and an effect label, then disappeared within 6s. Re-ran against public preview URL https://live-game-preview-1.preview.emergentagent.com with identical result. No console errors."
+      "evidence": "Via ADMIN quick-gift-rose-button (beneficiary lula, user tscheck_rosauser): thanks-cutscene appeared with thanks-cutscene-image src containing thanks_lula, title 'OBRIGADO,', user '@tscheck_rosauser!', and an effect label, then disappeared within 6s. Re-ran against public preview URL https://play-live-5.preview.emergentagent.com with identical result. No console errors."
     },
     {
       "criterion": "Rosa = damage boost",

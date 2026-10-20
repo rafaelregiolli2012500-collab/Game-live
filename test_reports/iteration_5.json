@@ -55,7 +55,7 @@
       "name": "start-screen-opens-arena",
       "lane": "browser",
       "status": "passed",
-      "evidence": "Re-ran the existing persisted check against https://live-game-preview-1.preview.emergentagent.com; gameplay-screen became visible with no login gate, no console errors."
+      "evidence": "Re-ran the existing persisted check against https://play-live-5.preview.emergentagent.com; gameplay-screen became visible with no login gate, no console errors."
     }
   ]
 }

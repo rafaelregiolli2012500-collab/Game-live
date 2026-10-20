@@ -1,8 +1,11 @@
-"""tscheck: slower default combat + CPU frequency config (v7 rules_version 6).
+"""tscheck: slower default combat + CPU frequency config.
 
 Criterion: "A luta padrão está visivelmente mais lenta sem desacelerar especiais" -
-backend must report rules_version 6, combat.animation_speed 0.85 and
-combat.auto_attack_frequency 1.12 for the live arena config.
+backend must report combat.animation_speed 0.85 and combat.auto_attack_frequency 1.12
+for the live arena config. The config has since migrated forward to rules_version 7
+(v9's Universo cinematic/animation_ms bump) without touching these combat defaults, so
+this test now asserts rules_version is at least the v7 baseline rather than pinning the
+superseded "6" value from when this check was first written.
 """
 
 
@@ -11,7 +14,7 @@ def test_live_config_reports_slower_default_combat_values(client):
     assert resp.status_code == 200, f"GET /api/live/config -> {resp.status_code} {resp.text[:200]}"
     body = resp.json()
 
-    assert body.get("rules_version") == 6, f"expected rules_version 6, got {body.get('rules_version')}"
+    assert body.get("rules_version", 0) >= 7, f"expected rules_version >= 7, got {body.get('rules_version')}"
 
     combat = body.get("combat", {})
     assert combat.get("animation_speed") == 0.85, f"expected animation_speed 0.85, got {combat.get('animation_speed')}"
