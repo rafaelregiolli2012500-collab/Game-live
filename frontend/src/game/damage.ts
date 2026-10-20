@@ -10,12 +10,17 @@ export interface DamageRequest {
   amount: number;
   source: DamageSource;
   outcome: HitOutcome;
+  /** Who dealt it — their damage boost multiplies the amount. */
+  attacker?: Fighter;
 }
 
 export function resolveDamage(settings: CombatSettings, req: DamageRequest): number {
   if (req.outcome === "dodge") return 0;
   if (req.source === "auto" && settings.combat_mode === "live") return 0;
   let amount = Math.max(0, req.amount);
+  // Gift buffs: attacker damage boost, target defense boost (both percent, capped by the engine).
+  if (req.attacker) amount *= 1 + req.attacker.dmgBoost.pct / 100;
+  amount *= 1 - req.target.defBoost.pct / 100;
   if (req.outcome === "block") amount = Math.max(req.amount > 0 ? 1 : 0, amount * settings.defense_reduction);
   amount = Math.round(amount);
   if (req.source === "gift" && !settings.allow_finisher) amount = Math.min(amount, Math.max(0, req.target.hp - 1));

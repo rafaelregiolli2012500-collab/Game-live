@@ -8,7 +8,7 @@ export type CombatMode = "live" | "normal";
 export type TargetCharacter = "opponent" | CharacterId;
 export type RepeatPolicy = "individual" | "group";
 /** Special moves a gift can trigger (from the reference movement sheet). */
-export type SpecialMove = "none" | "hadouken";
+export type SpecialMove = "none" | "hadouken" | "domain" | "damage_boost" | "defense_boost";
 
 export interface GiftRule {
   gift_id: string;
@@ -116,7 +116,7 @@ export const fetchLiveQueue = () => apiGet<GiftEvent[]>("/live/queue");
 export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   id: "default",
   integration_mode: "demo",
-  rules_version: 3,
+  rules_version: 4,
   combat: {
     max_hp: 600,
     common_damage: 5,
@@ -141,11 +141,38 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
     queue_priority: "fifo",
   },
   rules: [
-    { gift_id: "rose", gift_name: "Rosa", reference_value: 1, action_name: "Hadouken", damage: 30, animation_ms: 1800, effect_intensity: 1.2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "hadouken" },
+    { gift_id: "rose", gift_name: "Rosa", reference_value: 1, action_name: "Dano +10%", damage: 0, animation_ms: 1200, effect_intensity: 1, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "damage_boost" },
+    { gift_id: "heart", gift_name: "Coração", reference_value: 1, action_name: "Defesa +10%", damage: 0, animation_ms: 1200, effect_intensity: 1, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "defense_boost" },
+    { gift_id: "donut", gift_name: "Rosquinha", reference_value: 30, action_name: "Hadouken", damage: 30, animation_ms: 1800, effect_intensity: 1.2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "hadouken" },
+    { gift_id: "lion", gift_name: "Leão", reference_value: 29999, action_name: "Expansão de Domínio", damage: 120, animation_ms: 6500, effect_intensity: 2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "domain" },
   ],
 };
 
-export const GIFT_ICONS: Record<string, string> = { rose: "🌹" };
-export const SPECIAL_MOVES: { id: SpecialMove; label: string }[] = [{ id: "none", label: "Nenhum" }, { id: "hadouken", label: "Hadouken" }];
+export const GIFT_ICONS: Record<string, string> = { rose: "🌹", heart: "💗", donut: "🍩", lion: "🦁" };
+export const SPECIAL_MOVES: { id: SpecialMove; label: string }[] = [
+  { id: "none", label: "Nenhum" },
+  { id: "damage_boost", label: "Dano +10%" },
+  { id: "defense_boost", label: "Defesa +10%" },
+  { id: "hadouken", label: "Hadouken" },
+  { id: "domain", label: "Expansão de Domínio" },
+];
+
+/** Boost rules: each gift unit adds 10%, capped so the fight stays long; lasts 2 minutes (resets every round). */
+export const BOOST_STEP = 10;
+export const DAMAGE_BOOST_MAX = 100;
+export const DEFENSE_BOOST_MAX = 50;
+export const BOOST_DURATION_SEC = 120;
+
+/** Short effect label shown in the thank-you cutscene and HUD. */
+export function giftEffectLabel(event: GiftEvent): string {
+  const q = event.quantity;
+  switch (event.special_move) {
+    case "damage_boost": return `DANO +${Math.min(DAMAGE_BOOST_MAX, BOOST_STEP * q)}%`;
+    case "defense_boost": return `DEFESA +${Math.min(DEFENSE_BOOST_MAX, BOOST_STEP * q)}%`;
+    case "hadouken": return q > 1 ? `HADOUKEN x${Math.min(10, q)}` : "HADOUKEN";
+    case "domain": return "EXPANSÃO DE DOMÍNIO";
+    default: return event.action_name.toUpperCase();
+  }
+}
 export const giftIcon = (giftId: string) => GIFT_ICONS[giftId] ?? "🎁";
 export const giftTier = (value: number) => (value >= 20000 ? 4 : value >= 1000 ? 3 : value >= 30 ? 2 : 1);

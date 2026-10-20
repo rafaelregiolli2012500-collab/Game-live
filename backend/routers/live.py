@@ -12,11 +12,14 @@ router = APIRouter()
 GAME_ID = "main-arena"
 CONFIG_ID = "default"
 
-# Gift catalogue. Rosa triggers the Hadouken energy-ball special (red for Lula, blue for Flávio).
+# Gift catalogue (editable in ADMIN). Cheapest gifts buff, mid gift = Hadouken, top gift = Domain Expansion.
 DEFAULT_RULES: list[GiftRule] = [
-    GiftRule(gift_id="rose", gift_name="Rosa", reference_value=1, action_name="Hadouken", damage=30, animation_ms=1800, effect_intensity=1.2, special_move="hadouken"),
+    GiftRule(gift_id="rose", gift_name="Rosa", reference_value=1, action_name="Dano +10%", damage=0, animation_ms=1200, effect_intensity=1.0, target_character="opponent", special_move="damage_boost"),
+    GiftRule(gift_id="heart", gift_name="Coração", reference_value=1, action_name="Defesa +10%", damage=0, animation_ms=1200, effect_intensity=1.0, target_character="opponent", special_move="defense_boost"),
+    GiftRule(gift_id="donut", gift_name="Rosquinha", reference_value=30, action_name="Hadouken", damage=30, animation_ms=1800, effect_intensity=1.2, special_move="hadouken"),
+    GiftRule(gift_id="lion", gift_name="Leão", reference_value=29999, action_name="Expansão de Domínio", damage=120, animation_ms=6500, effect_intensity=2.0, special_move="domain"),
 ]
-RULES_VERSION = 3
+RULES_VERSION = 4
 
 _clients: dict[str, set[WebSocket]] = {}
 _queues: dict[str, asyncio.Queue[GiftEvent]] = {}
@@ -32,9 +35,10 @@ async def get_config() -> LiveConfig:
     if stored:
         # Migration: v1 rules (old specials) are dropped; then any missing default gift is added.
         stored.pop("_id", None)
-        kept = stored.get("rules", []) if stored.get("rules_version", 1) >= 2 else []
-        ids = {rule.get("gift_id") for rule in kept}
-        rules = kept + [rule.model_dump() for rule in DEFAULT_RULES if rule.gift_id not in ids]
+        # v1 rules (old specials) are dropped; default gifts replace any stored gift with the same id.
+        default_ids = {rule.gift_id for rule in DEFAULT_RULES}
+        kept = [r for r in stored.get("rules", []) if r.get("gift_id") not in default_ids] if stored.get("rules_version", 1) >= 2 else []
+        rules = [rule.model_dump() for rule in DEFAULT_RULES] + kept
         config = LiveConfig(**{**stored, "rules": rules, "rules_version": RULES_VERSION})
         await db.live_config.replace_one({"id": CONFIG_ID}, config.model_dump(), upsert=True)
         return config

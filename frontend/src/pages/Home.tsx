@@ -11,10 +11,12 @@ import { CANVAS_H, CANVAS_W, CHARACTERS, portraitPath } from "@/game/assets";
 import { ArenaEngine, emptyStats } from "@/game/engine";
 import type { CharacterId, HudSnapshot } from "@/game/types";
 import { useGiftSocket } from "@/hooks/useGiftSocket";
-import { DEFAULT_LIVE_CONFIG, fetchLiveConfig, fetchLiveEvents, fetchLiveStatus, giftIcon, sendDemoGift, updateLiveConfig } from "@/lib/live";
+import { DEFAULT_LIVE_CONFIG, fetchLiveConfig, fetchLiveEvents, fetchLiveStatus, giftEffectLabel, giftIcon, sendDemoGift, updateLiveConfig } from "@/lib/live";
 import type { DemoGiftCreate, GiftEvent, LiveConfig, LiveStatus } from "@/lib/live";
 
 type Screen = "menu" | "arena";
+
+const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 
 const EMPTY_STATS = emptyStats();
 
@@ -64,9 +66,7 @@ export default function Home() {
   const receiveGift = useCallback((event: GiftEvent) => {
     if (seenRef.current.has(event.event_id)) return;
     seenRef.current.add(event.event_id);
-    // Gifts with a special (Rosa → Hadouken) fire it in the arena; outside the arena they wait.
-    if (engineRef.current) engineRef.current.triggerSpecial(event);
-    else pendingRef.current.push(event);
+    // The thank-you cutscene plays first; its effect fires when the cutscene ends (applyGift).
     setCaptions((current) => [...current, event]);
     setLastGift(event);
     setRecent((current) => [event, ...current.filter((item) => item.event_id !== event.event_id)].slice(0, 5));
@@ -74,6 +74,13 @@ export default function Home() {
   }, []);
 
   useEffect(() => { [...socketEvents].reverse().forEach(receiveGift); }, [socketEvents, receiveGift]);
+
+  /** Fires a gift's effect (boost / hadouken / domain) right after its thank-you cutscene. */
+  const applyGift = useCallback((event: GiftEvent) => {
+    setCaptions((current) => current.filter((item) => item.id !== event.id));
+    if (engineRef.current) engineRef.current.triggerSpecial(event);
+    else pendingRef.current.push(event);
+  }, []);
 
   useEffect(() => {
     if (screen !== "arena" || !canvasRef.current) return undefined;
@@ -114,6 +121,10 @@ export default function Home() {
         <span className="broadcast-wins" data-testid={`broadcast-${side}-wins`}>★{wins[id]} VITÓRIAS</span>
         <div className="broadcast-health"><i style={{ width: `${Math.max(0, (hp[id] / liveConfig.combat.max_hp) * 100)}%`, background: CHARACTERS[id].accent }} /></div>
         <small data-testid={`broadcast-${side}-hp`}>{Math.round(hp[id])} / {liveConfig.combat.max_hp} HP</small>
+        <div className="boost-chips" data-testid={`broadcast-${side}-boosts`}>
+          {(hud?.boosts[id]?.damage ?? 0) > 0 && <span className="boost-chip boost-damage" data-testid={`broadcast-${side}-damage-boost`}>⚔ +{hud!.boosts[id].damage}% {clock(hud!.boosts[id].damageLeft)}</span>}
+          {(hud?.boosts[id]?.defense ?? 0) > 0 && <span className="boost-chip boost-defense" data-testid={`broadcast-${side}-defense-boost`}>🛡 +{hud!.boosts[id].defense}% {clock(hud!.boosts[id].defenseLeft)}</span>}
+        </div>
       </div>
     </div>
   );
@@ -139,7 +150,7 @@ export default function Home() {
           <h1 data-testid="game-title">BRASIL<br /><span>FIGHT ARENA</span></h1>
           <div className="live-mode-card arcade-panel" data-testid="tiktok-live-mode-card">
             <div className="live-mode-head"><span className="live-dot-icon"><Radio size={22} /></span><div><b data-testid="tiktok-live-mode-label">TIKTOK LIVE</b><small data-testid="tiktok-live-mode-status">{connection.text}</small></div></div>
-            <p data-testid="tiktok-live-mode-subtitle">Os lutadores trocam golpes sozinhos. Envie uma Rosa e seu lutador solta um Hadouken!</p>
+            <p data-testid="tiktok-live-mode-subtitle">Os lutadores trocam golpes sozinhos. Rosa = +dano, Coração = +defesa, Rosquinha = Hadouken e Leão = Expansão de Domínio!</p>
             <Button type="button" className="start-button live-enter-button" data-testid="enter-live-arena-button" onClick={enterArena}><span>ENTRAR NA ARENA LIVE</span><ChevronRight size={22} /></Button>
             {liveConfig.integration_mode === "demo" || connection.tone !== "ok"
               ? <small className="live-mode-note" data-testid="demo-mode-note">Sem conexão real com o TikTok: a arena abre em modo demonstração e os presentes são simulados pelo painel ADMIN.</small>
@@ -161,13 +172,13 @@ export default function Home() {
               {topPlayer(right, "right")}
             </div>
             <div className="arcade-frame">
-              <GiftCaptions captions={captions} durationMs={liveConfig.combat.caption_ms} onDone={(id) => setCaptions((current) => current.filter((item) => item.id !== id))} />
               <div className="canvas-wrap">
                 <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} data-testid="game-canvas" />
+                <GiftCaptions captions={captions} durationMs={liveConfig.combat.caption_ms} onDone={applyGift} />
                 {roundResult && <div className="round-result" data-testid="round-result-banner">{roundResult}</div>}
               </div>
               <div className="hud-strip">
-                <span data-testid="fight-mode-indicator">{hud && hud.specials > 0 ? `ESPECIAL: HADOUKEN${hud.specials > 1 ? ` x${hud.specials}` : ""}` : "LUTA AUTOMÁTICA"}</span>
+                <span data-testid="fight-mode-indicator">{hud?.domain ? `DOMÍNIO: ${hud.domain}` : hud && hud.specials > 0 ? `ESPECIAIS NA FILA: ${hud.specials}` : "LUTA AUTOMÁTICA"}</span>
                 <span data-testid="knockdown-count">QUEDAS <b>{hud?.stats.knockdowns ?? 0}</b></span>
                 <span data-testid="timer-display">TEMPO <b>{Math.ceil(hud?.timeLeft ?? liveConfig.combat.fight_duration_sec)}</b></span>
               </div>
@@ -176,8 +187,8 @@ export default function Home() {
               <div className="gift-callout">
                 <span data-testid="last-gift-label"><b className="gift-callout-icon" data-testid="last-gift-icon">{lastGift ? giftIcon(lastGift.gift_id) : "🎁"}</b>{lastGift ? `${lastGift.gift_name.toUpperCase()}${lastGift.quantity > 1 ? ` x${lastGift.quantity}` : ""}` : "AGUARDANDO PRESENTES"}{lastGift?.source === "demo" && <i className="demo-chip" data-testid="last-gift-simulated-chip">SIMULADO</i>}</span>
                 <small data-testid="last-gift-user">{lastGift ? `ENVIADO POR: @${lastGift.username}` : "NENHUM PRESENTE NESTA LUTA"}</small>
-                <strong data-testid="last-gift-action">{lastGift ? (lastGift.special_move === "hadouken" ? "ESPECIAL: HADOUKEN" : "PRESENTE RECEBIDO") : "ENVIE UMA ROSA = HADOUKEN"}</strong>
-                <em data-testid="last-gift-note">{lastGift ? `OBRIGADO, @${lastGift.username}!` : "🌹 ROSA SOLTA UM HADOUKEN"}</em>
+                <strong data-testid="last-gift-action">{lastGift ? giftEffectLabel(lastGift) : "🌹 DANO · 💗 DEFESA · 🍩 HADOUKEN · 🦁 DOMÍNIO"}</strong>
+                <em data-testid="last-gift-note">{lastGift ? `OBRIGADO, @${lastGift.username}!` : "ENVIE PRESENTES E MUDE A LUTA"}</em>
               </div>
               <div className="broadcast-stats">
                 <div className="gift-history" data-testid="gift-history-strip">{recent.length === 0 ? <span data-testid="gift-history-empty">—</span> : recent.map((event) => <span key={event.event_id} title={`@${event.username}`} data-testid={`gift-history-chip-${event.sequence}`}>{giftIcon(event.gift_id)}</span>)}</div>

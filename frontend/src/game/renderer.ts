@@ -1,12 +1,14 @@
 /** Canvas renderer: world (camera space) + HUD overlays (screen space). */
 import { CANVAS_H, CANVAS_W, CHARACTERS, FX_SPRITES, GROUND_Y, POSE_ANCHOR, POSE_HEIGHT, SPECIAL_COLORS, spritePath } from "./assets";
 import type { Projectile } from "./combat";
+import { domainScale, type Domain } from "./domain";
 import { HADOUKEN_RELEASE } from "./moves";
 import { applyCamera, type Camera } from "./camera";
 import { drawWorldEffects, type Effects } from "./effects";
 import type { Fighter, Pose } from "./types";
 
 export interface RenderState {
+  domain: Domain | null;
   fighters: Fighter[];
   camera: Camera;
   fx: Effects;
@@ -21,13 +23,14 @@ type Images = Record<string, HTMLImageElement>;
 const ready = (img?: HTMLImageElement) => Boolean(img && img.complete && img.naturalWidth);
 
 /** Draws a pose anchored at the body centre (feet on y) so pose switches never shift the body. */
-function drawSprite(ctx: CanvasRenderingContext2D, images: Images, id: Fighter["id"], pose: Pose, x: number, y: number, facing: number, rot: number, squash: number, alpha = 1) {
+function drawSprite(ctx: CanvasRenderingContext2D, images: Images, id: Fighter["id"], pose: Pose, x: number, y: number, facing: number, rot: number, squash: number, alpha = 1, filter = "none") {
   const img = images[spritePath(id, pose)];
   if (!ready(img)) return;
   const h = POSE_HEIGHT[id][pose] * squash;
   const w = (img.naturalWidth / img.naturalHeight) * POSE_HEIGHT[id][pose];
   ctx.save();
   ctx.globalAlpha = alpha;
+  ctx.filter = filter;
   ctx.translate(Math.round(x), Math.round(y));
   ctx.rotate(rot * facing);
   ctx.scale(facing, 1);
@@ -43,10 +46,14 @@ function drawFighter(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, 
   ctx.beginPath();
   ctx.ellipse(f.x, GROUND_Y + 4, (f.pose === "knockdown" ? 90 : 62) * Math.max(0.55, 1 - lift / 400), 11, 0, 0, Math.PI * 2);
   ctx.fill();
+  drawAura(ctx, f, x, y, time);
   ctx.save();
-  if (f.move) { ctx.shadowColor = CHARACTERS[f.id].accent; ctx.shadowBlur = 14; }
-  drawSprite(ctx, images, f.id, f.pose, x, y, f.facing, f.rot, f.squash);
+  if (f.move || f.state === "domain") { ctx.shadowColor = CHARACTERS[f.id].accent; ctx.shadowBlur = 14; }
+  // Frozen inside a domain: icy blue tint.
+  const ice = f.frozen > 0 ? `saturate(${1 - 0.7 * f.frozen}) brightness(${1 + 0.35 * f.frozen}) hue-rotate(${-20 * f.frozen}deg)` : "none";
+  drawSprite(ctx, images, f.id, f.pose, x, y, f.facing, f.rot, f.squash, 1, ice);
   ctx.restore();
+  if (f.frozen > 0) drawIce(ctx, x, y, f.frozen);
   if (f.flash > 0) {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
@@ -59,6 +66,121 @@ function drawFighter(ctx: CanvasRenderingContext2D, images: Images, f: Fighter, 
       ctx.fillStyle = i % 2 ? "#ffe600" : "#ffffff";
       ctx.fillRect(x + Math.cos(a) * 34 - 4, y - 262 + Math.sin(a) * 9, 8, 8);
     }
+  }
+}
+
+/** Gift boost auras: fiery orange for damage, cyan shield for defense. */
+function drawAura(ctx: CanvasRenderingContext2D, f: Fighter, x: number, y: number, time: number) {
+  if (f.dmgBoost.pct <= 0 && f.defBoost.pct <= 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  if (f.dmgBoost.pct > 0) {
+    const k = 0.55 + 0.45 * Math.min(1, f.dmgBoost.pct / 50);
+    for (let i = 0; i < 3; i += 1) {
+      const pulse = 1 + Math.sin(time * 9 + i * 2.1) * 0.06;
+      const g = ctx.createRadialGradient(x, y - 120, 10, x, y - 120, 150 * pulse);
+      g.addColorStop(0, `rgba(255,200,60,${0.32 * k})`);
+      g.addColorStop(0.55, `rgba(255,90,20,${0.3 * k})`);
+      g.addColorStop(1, "rgba(255,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(x + Math.sin(time * 6 + i) * 4, y - 125 - i * 6, 82 * pulse, 150 * pulse, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  if (f.defBoost.pct > 0) {
+    const pulse = 1 + Math.sin(time * 4) * 0.04;
+    ctx.strokeStyle = `rgba(0,240,255,${0.5 + 0.25 * Math.sin(time * 6)})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(x, y - 125, 92 * pulse, 148 * pulse, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    const g = ctx.createRadialGradient(x, y - 125, 60, x, y - 125, 150);
+    g.addColorStop(0, "rgba(0,240,255,0)");
+    g.addColorStop(1, "rgba(0,200,255,0.18)");
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Ice shards around a frozen fighter. */
+function drawIce(ctx: CanvasRenderingContext2D, x: number, y: number, k: number) {
+  const shards: [number, number, number][] = [[-52, -40, 34], [48, -60, 40], [-40, -150, 28], [44, -175, 30], [-8, -235, 22], [10, -20, 26]];
+  ctx.save();
+  ctx.globalAlpha = 0.75 * k;
+  ctx.fillStyle = "rgba(190,240,255,0.55)";
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  shards.forEach(([dx, dy, size]) => {
+    ctx.beginPath();
+    ctx.moveTo(x + dx, y + dy - size);
+    ctx.lineTo(x + dx + size * 0.45, y + dy);
+    ctx.lineTo(x + dx, y + dy + size * 0.5);
+    ctx.lineTo(x + dx - size * 0.45, y + dy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+/** Domain backgrounds: Lula = red sphere "Arena Sangrenta", Flávio = Brazilian flag "Floresta Tropical". */
+function drawDomain(ctx: CanvasRenderingContext2D, d: Domain, time: number) {
+  const k = domainScale(d);
+  if (k <= 0) return;
+  const cx = d.attacker.x;
+  const cy = GROUND_Y - 120;
+  const radius = 40 + k * 1150;
+  ctx.save();
+  if (d.attacker.id === "lula") {
+    ctx.fillStyle = `rgba(40,0,0,${0.62 * k})`;
+    ctx.fillRect(-60, -60, CANVAS_W + 120, CANVAS_H + 120);
+    const g = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
+    g.addColorStop(0, "rgba(255,40,40,0.08)");
+    g.addColorStop(0.8, "rgba(255,30,30,0.28)");
+    g.addColorStop(1, "rgba(255,60,60,0.55)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,80,80,0.9)";
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    // Rune circle on the floor.
+    ctx.strokeStyle = `rgba(255,50,50,${0.85 * k})`;
+    ctx.lineWidth = 3;
+    for (const [rx, ry] of [[190, 34], [140, 24]] as const) { ctx.beginPath(); ctx.ellipse(cx, GROUND_Y + 4, rx, ry, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.setLineDash([14, 10]);
+    ctx.lineDashOffset = -time * 60;
+    ctx.beginPath(); ctx.ellipse(cx, GROUND_Y + 4, 165, 29, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.clip();
+    // Green field with a subtle pixel checker.
+    ctx.fillStyle = "#009c3b";
+    ctx.fillRect(-60, -60, CANVAS_W + 120, CANVAS_H + 120);
+    ctx.fillStyle = "rgba(0,0,0,0.08)";
+    for (let yy = -48; yy < CANVAS_H + 48; yy += 24) for (let xx = -48 + ((yy / 24) % 2) * 24; xx < CANVAS_W + 48; xx += 48) ctx.fillRect(xx, yy, 24, 24);
+    ctx.fillStyle = "#ffdf00";
+    ctx.beginPath(); ctx.moveTo(CANVAS_W / 2, 40); ctx.lineTo(CANVAS_W - 70, CANVAS_H / 2 - 10); ctx.lineTo(CANVAS_W / 2, CANVAS_H - 60); ctx.lineTo(70, CANVAS_H / 2 - 10); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#002776";
+    ctx.beginPath(); ctx.arc(CANVAS_W / 2, CANVAS_H / 2 - 10, 150, 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    ctx.beginPath(); ctx.arc(CANVAS_W / 2, CANVAS_H / 2 - 10, 150, 0, Math.PI * 2); ctx.clip();
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 18;
+    ctx.beginPath(); ctx.arc(CANVAS_W / 2 + 40, CANVAS_H / 2 + 330, 380, Math.PI * 1.18, Math.PI * 1.82); ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    [[-80, 40], [-40, 70], [10, 55], [60, 80], [95, 30], [-100, 90], [30, 105], [-20, 120], [75, 120]].forEach(([dx, dy]) => ctx.fillRect(CANVAS_W / 2 + dx, CANVAS_H / 2 - 10 + dy, 5, 5));
+    ctx.restore();
+    ctx.fillStyle = `rgba(0,0,0,${0.25 * (1 - k)})`;
+    ctx.fillRect(-60, -60, CANVAS_W + 120, CANVAS_H + 120);
+  }
+  ctx.restore();
+  if (d.attacker.id !== "lula") {
+    ctx.save();
+    ctx.strokeStyle = `rgba(57,255,136,${0.9 * k})`;
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -123,10 +245,13 @@ export function render(ctx: CanvasRenderingContext2D, images: Images, s: RenderS
   if (ready(stage)) ctx.drawImage(stage, 0, 0, CANVAS_W, CANVAS_H);
   else { ctx.fillStyle = "#0d1020"; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
 
+  if (s.domain) drawDomain(ctx, s.domain, s.time);
   // Attacker drawn on top so an active limb never disappears behind the opponent.
   const ordered = [...s.fighters].sort((a, b) => (a.move ? 1 : 0) - (b.move ? 1 : 0));
   ordered.forEach((f) => drawFighter(ctx, images, f, s.time));
   s.fighters.forEach((f) => drawCharge(ctx, f, s.time));
+  if (s.domain && s.domain.ballX !== null) drawOrb(ctx, s.domain.attacker.id, s.domain.ballX, GROUND_Y - 140, 44, s.domain.attacker.facing, 1, s.time);
+  if (s.domain && s.domain.attacker.pose === "charge") drawOrb(ctx, s.domain.attacker.id, s.domain.attacker.x + 46 * s.domain.attacker.facing, GROUND_Y - 100, 24, s.domain.attacker.facing, 0, s.time);
   s.projectiles.forEach((p) => drawOrb(ctx, p.owner.id, p.x, p.y, 30, Math.sign(p.vx), Math.min(1, p.age * 6), s.time + p.age));
   drawWorldEffects(ctx, s.fx);
   ctx.restore();

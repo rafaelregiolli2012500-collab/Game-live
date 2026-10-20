@@ -1,23 +1,24 @@
 /**
  * ArenaEngine — single requestAnimationFrame loop orchestrating:
  * AI (ai.ts) → move/contact (combat.ts) → damage (damage.ts) → camera → effects → render.
- * Gift specials: triggerSpecial() queues a hadouken for the benefited fighter; it fires as soon as he is free.
+ * Gifts: triggerSpecial() applies boosts at once and queues hadoukens / domain expansions for the benefited fighter.
  */
-import type { CombatSettings, GiftEvent } from "@/lib/live";
+import { BOOST_DURATION_SEC, BOOST_STEP, DAMAGE_BOOST_MAX, DEFENSE_BOOST_MAX, type CombatSettings, type GiftEvent } from "@/lib/live";
 import { updateAi } from "./ai";
-import { CHARACTERS, loadImages } from "./assets";
+import { CHARACTERS, DOMAINS, loadImages } from "./assets";
 import { createCamera, resetCamera, updateCamera } from "./camera";
 import { createFighter, isAirborne, isFree, setState, startMove, updateMove, updateProjectiles, type CombatContext } from "./combat";
 import { adminAdjust } from "./damage";
-import { createEffects, updateEffects } from "./effects";
+import { endDomain, startDomain, updateDomain, type Domain } from "./domain";
+import { burst, createEffects, updateEffects } from "./effects";
 import { animateMove, animateState } from "./moves";
 import { render, type RenderState } from "./renderer";
-import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState } from "./types";
+import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState, HudSnapshot } from "./types";
 
 const GRAVITY = 1500;
 const ROUND_BREAK_SEC = 7;
 
-export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
+export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, domains: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
 
 /** Force both fighters to face each other (never show their backs). */
 function lockFacing(a: Fighter, b: Fighter) {
@@ -38,8 +39,9 @@ export class ArenaEngine {
   private paused = false;
   private roundOverAt: number | null = null;
   private banner: RenderState["banner"] = null;
-  /** Gift specials waiting for their fighter to be free (one hadouken each). */
-  private specials: { id: CharacterId; damage: number; username: string }[] = [];
+  /** Gift specials waiting for their fighter to be free. */
+  private specials: { id: CharacterId; kind: "hadouken" | "domain"; damage: number; username: string }[] = [];
+  private domain: Domain | null = null;
 
   private settings: CombatSettings;
   private left: CharacterId;
@@ -101,22 +103,51 @@ export class ArenaEngine {
 
   restartRound() { this.resetRound(); }
 
-  /** Queues the gift's special: "individual" = one hadouken per unit (max 10), "group" = one with summed damage. */
+  /**
+   * Applies a gift to the benefited fighter. Boosts: +10% per unit (damage max +100%, defense max +50%),
+   * timer refreshed to 2 minutes, reset on the next round. Specials: "individual" = one per unit (max 10), "group" = one summed.
+   */
   triggerSpecial(event: GiftEvent) {
-    if (event.special_move !== "hadouken") return;
     const id = event.benefited_character;
-    if (event.repeat_policy === "group") this.specials.push({ id, damage: event.damage * event.quantity, username: event.username });
-    else for (let i = 0; i < Math.min(10, event.quantity); i += 1) this.specials.push({ id, damage: event.damage, username: event.username });
+    const f = this.fighters.find((item) => item.id === id);
+    if (event.special_move === "damage_boost" || event.special_move === "defense_boost") {
+      if (!f) return;
+      const dmg = event.special_move === "damage_boost";
+      const boost = dmg ? f.dmgBoost : f.defBoost;
+      boost.pct = Math.min(dmg ? DAMAGE_BOOST_MAX : DEFENSE_BOOST_MAX, boost.pct + BOOST_STEP * event.quantity);
+      boost.left = BOOST_DURATION_SEC;
+      f.flash = 0.25;
+      const colors = dmg ? ["#ff9d1e", "#ff3b30", "#ffe600"] : ["#00f0ff", "#9fe8ff", "#ffffff"];
+      burst(this.ctxCombat.fx, f.x, 478 - 120, colors, 30, 260, -200);
+      this.playHit(0.8);
+      return;
+    }
+    if (event.special_move !== "hadouken" && event.special_move !== "domain") return;
+    const kind = event.special_move;
+    const units = kind === "domain" ? 1 : event.repeat_policy === "group" ? 1 : Math.min(10, event.quantity);
+    const damage = kind === "domain" || event.repeat_policy === "group" ? event.damage * event.quantity : event.damage;
+    for (let i = 0; i < units; i += 1) this.specials.push({ id, kind, damage, username: event.username });
   }
 
   private processSpecials() {
-    if (this.roundOverAt !== null) return;
+    if (this.roundOverAt !== null || this.domain) return;
     for (const f of this.fighters) {
       if (!isFree(f) || f.y < 0) continue;
       if (!f.special) {
         const index = this.specials.findIndex((item) => item.id === f.id);
         if (index < 0) continue;
-        const [next] = this.specials.splice(index, 1);
+        const next = this.specials[index];
+        if (next.kind === "domain") {
+          const victim = this.fighters.find((item) => item !== f)!;
+          // Wait until the opponent is standing and no energy ball is in flight.
+          if (victim.state === "knockdown" || victim.state === "grabbed" || victim.y < 0 || this.ctxCombat.projectiles.length) continue;
+          this.specials.splice(index, 1);
+          this.domain = startDomain(f, victim, next.damage);
+          this.ctxCombat.stats.domains += 1;
+          this.banner = { text: DOMAINS[f.id].title, sub: DOMAINS[f.id].name, until: this.ctxCombat.time + 1.5 };
+          return;
+        }
+        this.specials.splice(index, 1);
         f.special = { damage: next.damage, username: next.username };
       }
       // Fire (or re-fire if a previous attempt was interrupted before the release).
@@ -135,6 +166,7 @@ export class ArenaEngine {
     this.timeLeft = this.settings.fight_duration_sec;
     this.roundOverAt = null;
     this.ctxCombat.projectiles = [];
+    this.domain = null;
     resetCamera(this.ctxCombat.camera, 8);
     this.banner = { text: `ROUND ${String(this.round).padStart(2, "0")}`, sub: "LUTEM!", until: this.ctxCombat.time + 1.6 };
     this.callbacks.onRoundStart(this.round);
@@ -143,6 +175,7 @@ export class ArenaEngine {
   private endRound(winner: Fighter | null) {
     if (this.roundOverAt !== null) return;
     this.roundOverAt = this.ctxCombat.time;
+    if (this.domain) { this.domain.victim.frozen = 0; this.domain = null; }
     resetCamera(this.ctxCombat.camera);
     this.fighters.forEach((f) => {
       f.combo = [];
@@ -167,6 +200,17 @@ export class ArenaEngine {
     const push = (min - gap) / 2;
     a.x = Math.max(70, Math.min(890, a.x - dir * push));
     b.x = Math.max(70, Math.min(890, b.x + dir * push));
+  }
+
+  /** Counts boosts down; spawns rising aura sparks while active. */
+  private tickBoosts(f: Fighter, dt: number) {
+    for (const boost of [f.dmgBoost, f.defBoost]) {
+      if (boost.pct <= 0) continue;
+      boost.left -= dt;
+      if (boost.left <= 0) { boost.pct = 0; boost.left = 0; }
+    }
+    if (f.dmgBoost.pct > 0 && Math.random() < dt * 14) burst(this.ctxCombat.fx, f.x + (Math.random() - 0.5) * 90, 478 - Math.random() * 200, ["#ff9d1e", "#ff3b30", "#ffe600"], 1, 40, -320);
+    if (f.defBoost.pct > 0 && Math.random() < dt * 8) burst(this.ctxCombat.fx, f.x + (Math.random() - 0.5) * 110, 478 - Math.random() * 220, ["#00f0ff", "#ffffff"], 1, 30, -120);
   }
 
   private physics(f: Fighter, dt: number) {
@@ -203,7 +247,7 @@ export class ArenaEngine {
     const dt = Math.min(0.033, (now - this.last) / 1000);
     this.last = now;
     if (!this.paused) this.step(dt);
-    render(this.ctx, this.images, { fighters: this.fighters, camera: this.ctxCombat.camera, fx: this.ctxCombat.fx, projectiles: this.ctxCombat.projectiles, timeLeft: this.timeLeft, round: this.round, time: this.ctxCombat.time, banner: this.banner });
+    render(this.ctx, this.images, { domain: this.domain, fighters: this.fighters, camera: this.ctxCombat.camera, fx: this.ctxCombat.fx, projectiles: this.ctxCombat.projectiles, timeLeft: this.timeLeft, round: this.round, time: this.ctxCombat.time, banner: this.banner });
     if (now - this.hudAt > 100) {
       this.hudAt = now;
       const [a, b] = this.fighters;
@@ -211,7 +255,9 @@ export class ArenaEngine {
       this.callbacks.onHud({
         hp: { [a.id]: a.hp, [b.id]: b.hp } as Record<CharacterId, number>,
         timeLeft: this.timeLeft, round: this.round, stats: { ...this.ctxCombat.stats }, states,
-        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken").length,
+        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken").length + (this.domain ? 1 : 0),
+        boosts: Object.fromEntries(this.fighters.map((f) => [f.id, { damage: f.dmgBoost.pct, damageLeft: f.dmgBoost.left, defense: f.defBoost.pct, defenseLeft: f.defBoost.left }])) as HudSnapshot["boosts"],
+        domain: this.domain ? DOMAINS[this.domain.attacker.id].name : null,
       });
     }
     this.raf = requestAnimationFrame(this.frame);
@@ -221,7 +267,17 @@ export class ArenaEngine {
     const c = this.ctxCombat;
     c.time += dt;
     const [a, b] = this.fighters;
-    if (this.roundOverAt !== null) {
+    this.fighters.forEach((f) => this.tickBoosts(f, dt));
+    if (this.domain && this.roundOverAt === null) {
+      // Cinematic: the domain owns both fighters; round timer, AI and energy balls are paused.
+      const d = this.domain;
+      this.fighters.forEach((f) => { f.flash = Math.max(0, f.flash - dt); });
+      if (updateDomain(d, c, dt)) { this.domain = null; endDomain(d, c); }
+      if (this.fighters.some((f) => f.hp <= 0) && !this.domain) {
+        const ko = this.fighters.find((f) => f.hp <= 0)!;
+        this.endRound(this.fighters.find((f) => f !== ko)!);
+      }
+    } else if (this.roundOverAt !== null) {
       this.fighters.forEach((f) => { f.stateTime += dt; this.physics(f, dt); animateState(f, c.time); });
       lockFacing(a, b);
       if (c.time - this.roundOverAt >= ROUND_BREAK_SEC) { this.round += 1; this.resetRound(); }

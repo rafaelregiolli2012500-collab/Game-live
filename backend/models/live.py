@@ -9,7 +9,7 @@ IntegrationMode = Literal["demo", "live"]
 CombatMode = Literal["live", "normal"]
 TargetCharacter = Literal["opponent", "lula", "flavio"]
 # Special moves a gift can trigger (from the reference movement sheet).
-SpecialMove = Literal["none", "hadouken"]
+SpecialMove = Literal["none", "hadouken", "domain", "damage_boost", "defense_boost"]
 
 
 class GiftRule(BaseModel):
@@ -54,8 +54,8 @@ class LiveConfig(BaseModel):
     id: str = "default"
     integration_mode: IntegrationMode = "demo"
     rules: list[GiftRule] = Field(default_factory=list)
-    # Bumped when the gift catalogue changes; v2 = old gifts removed, v3 = Rosa → Hadouken.
-    rules_version: int = 3
+    # Bumped when the gift catalogue changes; v2 = old gifts removed, v3 = Rosa → Hadouken, v4 = boosts + domain.
+    rules_version: int = 4
     combat: CombatSettings = Field(default_factory=CombatSettings)
 
 

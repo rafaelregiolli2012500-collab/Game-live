@@ -5,11 +5,11 @@ export type { CharacterId };
 export type Pose =
   | "idle" | "walk" | "crouch" | "jump"
   | "punch" | "hook" | "uppercut" | "kick" | "airkick" | "sweep" | "grab"
-  | "charge" | "fireball"
+  | "charge" | "fireball" | "mudra"
   | "block" | "hurt" | "stun" | "knockdown" | "victory";
 /** Moves from the reference movement sheet; "hadouken" is the gift-only special (never chosen by the AI). */
 export type BasicMove = "jab" | "hook" | "uppercut" | "kick" | "sweep" | "airkick" | "grab" | "hadouken";
-export type FighterState = "idle" | "walk" | "attack" | "block" | "dodge" | "hit" | "stun" | "grabbed" | "knockdown" | "victory";
+export type FighterState = "idle" | "walk" | "attack" | "block" | "dodge" | "hit" | "stun" | "grabbed" | "knockdown" | "victory" | "domain" | "frozen";
 
 export interface AiMemory {
   cooldown: number;
@@ -24,6 +24,8 @@ export interface AiMemory {
   moveTimer: number;
   lastOutcome: HitOutcome | null;
 }
+
+export interface Boost { pct: number; left: number }
 
 export interface Fighter {
   id: CharacterId;
@@ -53,6 +55,11 @@ export interface Fighter {
   grabPartner: Fighter | null;
   /** Gift special in progress: damage carried by the energy ball once released. */
   special: { damage: number; username: string } | null;
+  /** Gift buffs (percent + seconds left); both reset when a new round starts. */
+  dmgBoost: Boost;
+  defBoost: Boost;
+  /** 0..1 ice intensity while frozen inside an opponent's domain. */
+  frozen: number;
   ai: AiMemory;
 }
 
@@ -68,6 +75,7 @@ export interface CombatStats {
   airkick: number;
   grab: number;
   hadouken: number;
+  domains: number;
   throws: number;
   combos: number;
   stuns: number;
@@ -90,6 +98,9 @@ export interface HudSnapshot {
   stats: CombatStats;
   /** Gift specials waiting + in flight. */
   specials: number;
+  boosts: Record<CharacterId, { damage: number; damageLeft: number; defense: number; defenseLeft: number }>;
+  /** Name of the active domain expansion, if any. */
+  domain: string | null;
   states: Record<CharacterId, FighterState>;
 }
 

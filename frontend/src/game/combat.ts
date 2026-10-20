@@ -37,7 +37,7 @@ let attackCounter = 0;
 export function createFighter(id: Fighter["id"], x: number, hp: number, facing: 1 | -1 = 1): Fighter {
   return {
     id, x, y: 0, vx: 0, vy: 0, facing, hp, state: "idle", stateTime: 0, stateDuration: 0, move: null, moveTime: 0, impactsDone: 0, attackId: 0, combo: [],
-    pose: "idle", ox: 0, oy: 0, rot: 0, squash: 1, flash: 0, stunBuild: 0, stunImmune: 0, invuln: 0, grabPartner: null, special: null,
+    pose: "idle", ox: 0, oy: 0, rot: 0, squash: 1, flash: 0, stunBuild: 0, stunImmune: 0, invuln: 0, grabPartner: null, special: null, dmgBoost: { pct: 0, left: 0 }, defBoost: { pct: 0, left: 0 }, frozen: 0,
     ai: { cooldown: 0.6 + Math.random() * 0.6, stance: "aggressive", stanceTimer: 2, reactedTo: 0, counterWindow: 0, lastGrab: -10, recentHits: 0, seenMoves: [], moveDir: 0, moveTimer: 0, lastOutcome: null },
   };
 }
@@ -149,7 +149,7 @@ export function updateProjectiles(ctx: CombatContext, fighters: Fighter[], dt: n
       burst(ctx.fx, p.x, p.y, colors, 26, 380);
       ring(ctx.fx, p.x, p.y, colors[0], 1.6);
       flash(ctx.fx, 0.35, colors[0]);
-      applyDamage(ctx.settings, { target, amount: p.damage, source: "gift", outcome: "hit" });
+      applyDamage(ctx.settings, { attacker: p.owner, target, amount: p.damage, source: "gift", outcome: "hit" });
       return false;
     }
     return p.x > -80 && p.x < 1040;
@@ -215,7 +215,7 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
       } else {
         reactToContact(f, other, outcome, POWER[f.move], def.stun, ctx, ["#ff006e", "#ffffff", "#ffe600"], HIT_HEIGHT[f.move]);
       }
-      applyDamage(ctx.settings, { target: other, amount: damageFor(f.move, ctx.settings), source: "auto", outcome });
+      applyDamage(ctx.settings, { attacker: f, target: other, amount: damageFor(f.move, ctx.settings), source: "auto", outcome });
     } else {
       f.ai.lastOutcome = null;
     }
@@ -230,7 +230,7 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
         reactToContact(f, victim, "hit", 0.5, 0, ctx, ["#ff9d1e", "#ffffff"]);
         setState(victim, "grabbed");
         victim.vx = 0;
-        applyDamage(ctx.settings, { target: victim, amount: ctx.settings.common_damage, source: "auto", outcome: "hit" });
+        applyDamage(ctx.settings, { attacker: f, target: victim, amount: ctx.settings.common_damage, source: "auto", outcome: "hit" });
       }
     });
     if (t >= 1.12) {
@@ -238,7 +238,7 @@ export function updateMove(f: Fighter, other: Fighter, ctx: CombatContext, dt: n
       knockDown(f, victim, ctx, 360, -470, 1.45);
       ctx.stats.throws += 1;
       burst(ctx.fx, victim.x, GROUND_Y - 60, ["#ffffff", "#ff006e"], 14, 240);
-      applyDamage(ctx.settings, { target: victim, amount: ctx.settings.combo_damage, source: "auto", outcome: "hit" });
+      applyDamage(ctx.settings, { attacker: f, target: victim, amount: ctx.settings.combo_damage, source: "auto", outcome: "hit" });
     }
   }
 

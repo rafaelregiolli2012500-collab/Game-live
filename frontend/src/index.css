@@ -148,3 +148,35 @@
 .combat-stats span { padding: 7px 8px; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; color: #9aa6b8; background: rgba(0,0,0,.2); font: 700 9px "Geist Mono Variable", monospace; }
 .combat-stats b { color: #00f0ff; font-size: 12px; }
 @media (max-width: 620px) { .connection-pill { display: none; } .combat-stats { grid-template-columns: 1fr 1fr; } .live-mode-card { padding: 20px; } }
+
+/* ---------- Thank-you cutscene (every gift) ---------- */
+@keyframes thanks-in { from { opacity: 0; clip-path: inset(0 0 0 100%); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+@keyframes thanks-out { to { opacity: 0; transform: scale(1.04); } }
+@keyframes thanks-zoom { from { transform: scale(1.12) translateX(2%); } to { transform: scale(1) translateX(0); } }
+@keyframes thanks-copy-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes thanks-bar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes thanks-glow { 50% { text-shadow: 0 0 18px var(--accent), 3px 3px 0 #05060a; } }
+.thanks-cutscene { position: absolute; inset: 0; z-index: 6; overflow: hidden; background: #05060a; animation: thanks-in .42s cubic-bezier(.2,.9,.3,1) both; pointer-events: none; }
+.thanks-cutscene.is-leaving { animation: thanks-out .38s ease forwards; }
+.thanks-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 30% 35%; image-rendering: pixelated; animation: thanks-zoom 3.2s ease-out both; }
+.thanks-shade { position: absolute; inset: 0; background: linear-gradient(90deg, transparent 30%, rgba(5,6,10,.55) 58%, rgba(5,6,10,.88)); }
+.thanks-bar { position: absolute; left: 0; right: 0; height: 9%; background: #000; animation: thanks-bar .3s ease both; }
+.thanks-bar-top { top: 0; transform-origin: top; border-bottom: 2px solid var(--accent); }
+.thanks-bar-bottom { bottom: 0; transform-origin: bottom; border-top: 2px solid var(--accent); }
+.thanks-copy { position: absolute; top: 50%; right: 5%; display: flex; max-width: 50%; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; transform: translateY(-50%); }
+.thanks-copy > * { animation: thanks-copy-in .45s cubic-bezier(.2,1.2,.4,1) both; }
+.thanks-copy > *:nth-child(2) { animation-delay: .08s; } .thanks-copy > *:nth-child(3) { animation-delay: .16s; } .thanks-copy > *:nth-child(4) { animation-delay: .24s; } .thanks-copy > *:nth-child(5) { animation-delay: .32s; }
+.thanks-kicker { padding: 2px 7px; border-radius: 3px; color: #05060a; background: var(--accent); font: 900 clamp(6px, 1.6vw, 10px) "Geist Mono Variable", monospace; letter-spacing: .14em; }
+.thanks-title { color: #fff; font: 900 clamp(16px, 4.6vw, 34px) "Space Grotesk", sans-serif; letter-spacing: .04em; line-height: 1; text-shadow: 3px 3px 0 #05060a; }
+.thanks-user { max-width: 100%; overflow: hidden; color: var(--accent); font: 900 clamp(13px, 3.8vw, 28px) "Space Grotesk", sans-serif; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; text-shadow: 3px 3px 0 #05060a; animation: thanks-copy-in .45s cubic-bezier(.2,1.2,.4,1) .16s both, thanks-glow 1.2s ease-in-out .6s infinite !important; }
+.thanks-gift { display: flex; align-items: center; gap: 5px; margin-top: 4px; color: #fff; font: 800 clamp(7px, 1.8vw, 12px) "Geist Mono Variable", monospace; }
+.thanks-gift b { font-size: 1.6em; }
+.thanks-gift i { padding: 1px 4px; border-radius: 3px; color: #080911; background: #ffe600; font-size: .7em; font-style: normal; }
+.thanks-effect { padding: 3px 8px; border: 1px solid var(--accent); border-radius: 4px; color: #ffe600; background: rgba(5,6,10,.7); font: 900 clamp(7px, 1.9vw, 13px) "Space Grotesk", sans-serif; font-style: normal; letter-spacing: .08em; }
+.thanks-backlog { position: absolute; top: 11%; right: 3%; color: #fff; font: 800 9px "Geist Mono Variable", monospace; }
+/* ---------- Boost chips under each profile ---------- */
+.boost-chips { display: flex; flex-wrap: wrap; gap: 3px; min-height: 0; margin-top: 3px; }
+.broadcast-player-right .boost-chips { justify-content: flex-end; }
+.boost-chip { padding: 1px 4px; border-radius: 3px; font: 800 7px "Geist Mono Variable", monospace; white-space: nowrap; animation: float-in .25s ease both; }
+.boost-damage { color: #1a0800; background: linear-gradient(90deg, #ffe600, #ff9d1e); box-shadow: 0 0 8px rgba(255,157,30,.6); }
+.boost-defense { color: #001a20; background: linear-gradient(90deg, #9fe8ff, #00f0ff); box-shadow: 0 0 8px rgba(0,240,255,.55); }

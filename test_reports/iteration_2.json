@@ -1,0 +1,61 @@
+{
+  "iteration": 2,
+  "mode": "generate",
+  "summary": "All 7 acceptance criteria for the gift thank-you cutscene + boost/special effects feature verified via 6 new browser checks (1 re-run on the public preview URL). No console errors or >=400 API responses observed in any flow.",
+  "passed": 7,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Thank-you cutscene for every gift",
+      "name": "thanks-cutscene-shows-for-gift",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Via ADMIN quick-gift-rose-button (beneficiary lula, user tscheck_rosauser): thanks-cutscene appeared with thanks-cutscene-image src containing thanks_lula, title 'OBRIGADO,', user '@tscheck_rosauser!', and an effect label, then disappeared within 6s. Re-ran against public preview URL https://sprite-motion-swap.preview.emergentagent.com with identical result. No console errors."
+    },
+    {
+      "criterion": "Rosa = damage boost",
+      "name": "rosa-damage-boost-chip",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Simulated Rosa x2 for Lula via simulate-gift-button (quantity=2, grouped into one cutscene showing 'ROSA x2'/'DANO +20%'). After cutscene closed, broadcast-left-damage-boost chip showed '+20%' with an mm:ss countdown. No console errors, no 4xx/5xx (backend log showed 200 OK for POST /api/live/demo/gift)."
+    },
+    {
+      "criterion": "Coração = defense boost",
+      "name": "coracao-defense-boost-chip",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Sent Coração via quick-gift-heart-button for Flávio (user tscheck_heartuser); cutscene showed thanks_flavio image; after it closed, broadcast-right-defense-boost chip showed '+10%' with countdown. No console errors."
+    },
+    {
+      "criterion": "Boosts reset on new round",
+      "name": "boosts-reset-on-restart",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "After a Rosa gift produced a visible broadcast-left-damage-boost chip, clicking restart-round-button (REINICIAR RODADA) removed the chip (count 0) and no defense-boost chip appeared either."
+    },
+    {
+      "criterion": "Leão = Domain Expansion",
+      "name": "leao-domain-expansion",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Sent Leão for Lula; after cutscene closed, fight-mode-indicator read 'DOMÍNIO: ARENA SANGRENTA', then reverted to 'LUTA AUTOMÁTICA' after ~6.5s. Flávio's HP (broadcast-right-hp) dropped from 600 to 484 (-116), within the expected ~110-125 range, with no boosts active."
+    },
+    {
+      "criterion": "Rosquinha = Hadouken",
+      "name": "rosquinha-hadouken-damage",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Sent Rosquinha for Lula; after the thanks_lula cutscene closed, Flávio's HP dropped by exactly 30 (broadcast-right-hp)."
+    },
+    {
+      "criterion": "No errors",
+      "name": "(aggregate, no dedicated UI surface)",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "No criterion-specific control exists for this; verified as an aggregate property of all 6 checks above plus the backend supervisor log: every check's console_errors field was empty/null, and backend.out.log showed only 200 OK responses for /api/live/config, /api/live/events, /api/live/status and POST /api/live/demo/gift during all flows. No action needed."
+    }
+  ]
+}
