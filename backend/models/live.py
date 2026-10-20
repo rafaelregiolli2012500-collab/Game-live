@@ -15,6 +15,8 @@ SpecialMove = Literal[
     "shoryuken",
     "ultra_hadouken",
     "domain",
+    "invocadores",
+    "genkidama",
     "damage_boost",
     "defense_boost",
 ]
@@ -62,8 +64,8 @@ class LiveConfig(BaseModel):
     id: str = "default"
     integration_mode: IntegrationMode = "demo"
     rules: list[GiftRule] = Field(default_factory=list)
-    # Bumped for catalogue/settings migrations; v7 = four-second Ultra charge.
-    rules_version: int = 7
+    # Bumped for catalogue/settings migrations; v9 = Invocação do Xande naming/art.
+    rules_version: int = 9
     combat: CombatSettings = Field(default_factory=CombatSettings)
 
 

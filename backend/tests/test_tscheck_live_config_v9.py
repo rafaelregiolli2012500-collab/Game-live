@@ -11,7 +11,7 @@ def test_live_config_reports_rules_version_7_and_universe_animation_4800():
         assert resp.status_code == 200, resp.text
         config = resp.json()
 
-        assert config["rules_version"] == 7, config
+        assert config["rules_version"] == 9, config
 
         universe_rule = next((r for r in config["rules"] if r["gift_id"] == "universe"), None)
         assert universe_rule is not None, config["rules"]

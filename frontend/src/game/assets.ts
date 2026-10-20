@@ -54,6 +54,10 @@ export const SOUND_FILES = {
   animePowerup: "/audio/anime-powerup.mp3",
   surprised: "/audio/surprised.mp3",
   struggleStand: "/audio/struggle-stand.mp3",
+  genkidamaCharge: "/audio/genkidama-charge.mp3",
+  genkidamaImpact: "/audio/genkidama-impact.mp3",
+  lulaSpecialAlt: "/audio/lula-special-alt.mp3",
+  flavioSpecial: "/audio/flavio-special.mp3",
 } as const;
 
 /** Domain expansion per fighter (from the user's domain catalogue). */
@@ -72,6 +76,11 @@ export const FX_SPRITES = {
   stage: "/sprites/stage.jpg",
   ultraBeam: "/sprites/ultra_beam_sheet.png",
   ultraAura: "/sprites/ultra_aura.png",
+  invocadorHammer: "/sprites/invocador_hammer_sheet.png",
+  genkidamaFx: "/sprites/genkidama_fx_sheet.png",
+  genkidamaLula: "/sprites/lula_genkidama_sheet.png",
+  genkidamaFlavio: "/sprites/flavio_genkidama_sheet.png",
+  hammerJustice: "/sprites/hammer_justice_backdrop.png",
 } as const;
 
 export function loadImages(): Record<string, HTMLImageElement> {

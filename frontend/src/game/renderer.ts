@@ -5,10 +5,12 @@ import { domainScale, type Domain } from "./domain";
 import { HADOUKEN_RELEASE, ULTRA_RELEASE } from "./moves";
 import { applyCamera, type Camera } from "./camera";
 import { drawWorldEffects, type Effects } from "./effects";
+import { GENKIDAMA_IMPACT, type GiftCinematic } from "./giftCinematics";
 import type { Fighter, Pose } from "./types";
 
 export interface RenderState {
   domain: Domain | null;
+  cinematic: GiftCinematic | null;
   fighters: Fighter[];
   camera: Camera;
   fx: Effects;
@@ -298,6 +300,135 @@ function drawCharge(ctx: CanvasRenderingContext2D, f: Fighter, time: number) {
   drawOrb(ctx, f.id, f.x + (f.ox + dx) * f.facing, GROUND_Y + f.y + f.oy + dy, (ultra ? 18 : 8) + (ultra ? 46 : 16) * k, f.facing, 0, time, ultra);
 }
 
+function drawSheetFrame(ctx: CanvasRenderingContext2D, image: HTMLImageElement, frame: number, cellW: number, cellH: number, x: number, y: number, width: number, height: number, facing = 1) {
+  if (!ready(image)) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing, 1);
+  ctx.drawImage(image, frame * cellW, 0, cellW, cellH, -width / 2, -height, width, height);
+  ctx.restore();
+}
+
+/** Supplied-reference cinematics: summoned hammer warrior and destructive Genkidama. */
+function drawCinematicBackdrop(ctx: CanvasRenderingContext2D, images: Images, cinematic: GiftCinematic) {
+  const { kind, t } = cinematic;
+  ctx.save();
+  if (kind === "invocadores") {
+    const glow = ctx.createRadialGradient(CANVAS_W / 2, CANVAS_H / 2, 40, CANVAS_W / 2, CANVAS_H / 2, 520);
+    glow.addColorStop(0, "rgba(120,70,0,.58)");
+    glow.addColorStop(0.55, "rgba(35,18,0,.78)");
+    glow.addColorStop(1, "rgba(4,4,10,.9)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-100, -100, CANVAS_W + 200, CANVAS_H + 200);
+    const justice = images[FX_SPRITES.hammerJustice];
+    if (ready(justice)) {
+      const pulse = 1 + Math.sin(t * 4) * 0.025;
+      const width = 570 * pulse;
+      const height = (justice.naturalHeight / justice.naturalWidth) * width;
+      ctx.globalAlpha = 0.28;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.filter = "saturate(1.5) brightness(.9)";
+      ctx.shadowColor = "#facc15";
+      ctx.shadowBlur = 34;
+      ctx.drawImage(justice, CANVAS_W / 2 - width / 2, CANVAS_H / 2 - height / 2 - 12, width, height);
+    }
+  } else {
+    ctx.fillStyle = `rgba(0,8,34,${Math.min(0.58, t * 0.22)})`;
+    ctx.fillRect(-100, -100, CANVAS_W + 200, CANVAS_H + 200);
+  }
+  ctx.restore();
+}
+
+/** Supplied-reference cinematics: summoned hammer warrior and destructive Genkidama. */
+function drawGiftCinematic(ctx: CanvasRenderingContext2D, images: Images, cinematic: GiftCinematic, time: number) {
+  const { attacker, victim, kind, t } = cinematic;
+
+  if (kind === "invocadores") {
+    if (t < 0.45 || t > 3.58) return;
+    const frame = t < 0.72 ? 0 : t < 1.16 ? 1 : t < 1.5 ? 2 : t < 2.42 ? 3 : 4;
+    const summonX = victim.x - attacker.facing * 112;
+    const sheet = images[FX_SPRITES.invocadorHammer];
+    if (t > 1.04 && t < 3.02) {
+      const pulse = 1 + Math.sin(time * 17) * 0.06;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const aura = ctx.createRadialGradient(summonX, GROUND_Y - 125, 18, summonX, GROUND_Y - 125, 145 * pulse);
+      aura.addColorStop(0, "rgba(255,255,220,.52)");
+      aura.addColorStop(0.3, "rgba(250,204,21,.48)");
+      aura.addColorStop(0.72, "rgba(245,158,11,.22)");
+      aura.addColorStop(1, "rgba(245,158,11,0)");
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.ellipse(summonX, GROUND_Y - 125, 112 * pulse, 164 * pulse, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(253,224,71,${0.58 + Math.sin(time * 20) * 0.18})`;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(summonX, GROUND_Y - 125, 92 * pulse, 145 * pulse, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.shadowColor = "#f59e0b";
+    ctx.shadowBlur = t < 0.9 ? 30 : 16;
+    drawSheetFrame(ctx, sheet, frame, 256, 320, summonX, GROUND_Y + 5, 222, 286, attacker.facing);
+    ctx.restore();
+    if (t > 0.46) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(251,146,60,${Math.max(0, 0.78 - (t - 0.46) * 0.12)})`;
+      ctx.lineWidth = 4;
+      for (let index = -3; index <= 3; index += 1) {
+        ctx.beginPath();
+        ctx.moveTo(summonX, GROUND_Y);
+        ctx.lineTo(summonX + index * 54, GROUND_Y + 12 + Math.abs(index) * 3);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    return;
+  }
+
+  const sheet = images[FX_SPRITES.genkidamaFx];
+  const fighterSheet = images[attacker.id === "lula" ? FX_SPRITES.genkidamaLula : FX_SPRITES.genkidamaFlavio];
+  const fighterFrame = t < 1.1 ? 0 : t < 1.85 ? 1 : 2;
+  drawSheetFrame(ctx, fighterSheet, fighterFrame, 256, 320, attacker.x, GROUND_Y + attacker.oy, 200, 250, attacker.facing);
+  if (t < 3.55) {
+    const charge = Math.min(1, t / 3.35);
+    const frame = charge < 0.35 ? 0 : 1;
+    const size = 74 + charge * 280;
+    const pulse = 1 + Math.sin(time * 18) * 0.045;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.shadowColor = "#38bdf8";
+    ctx.shadowBlur = 35 + charge * 42;
+    const orbSize = size * pulse;
+    const gathering = t < 1.1;
+    const orbCenterX = gathering ? attacker.x + attacker.facing * 78 : attacker.x;
+    const orbCenterY = gathering ? GROUND_Y + attacker.oy - 148 : GROUND_Y + attacker.oy - 245 - charge * 48;
+    drawSheetFrame(ctx, sheet, frame, 320, 320, orbCenterX, orbCenterY + orbSize / 2, orbSize, orbSize, 1);
+    ctx.restore();
+  } else if (t < GENKIDAMA_IMPACT) {
+    const launch = Math.min(1, (t - 3.55) / (GENKIDAMA_IMPACT - 3.55));
+    const x = attacker.x + (victim.x - attacker.x) * launch;
+    const y = 80 + Math.sin(launch * Math.PI) * -75;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.shadowColor = "#7dd3fc";
+    ctx.shadowBlur = 58;
+    drawSheetFrame(ctx, sheet, 1, 320, 320, x, y + 165, 330, 330, 1);
+    if (launch > 0.62) drawSheetFrame(ctx, sheet, 2, 320, 320, victim.x, GROUND_Y + 15, 310, 455, 1);
+    ctx.restore();
+  } else {
+    const settle = Math.min(1, (t - GENKIDAMA_IMPACT) / 1.05);
+    ctx.save();
+    ctx.globalAlpha = 1 - settle * 0.3;
+    ctx.shadowColor = "#38bdf8";
+    ctx.shadowBlur = 30 * (1 - settle);
+    drawSheetFrame(ctx, sheet, 3, 320, 320, victim.x, GROUND_Y + 18, 410 + settle * 70, 238 + settle * 24, 1);
+    ctx.restore();
+  }
+}
+
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = "center") {
   ctx.font = `900 ${size}px 'Space Grotesk', sans-serif`;
   ctx.textAlign = align;
@@ -316,9 +447,14 @@ export function render(ctx: CanvasRenderingContext2D, images: Images, s: RenderS
   else { ctx.fillStyle = "#0d1020"; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
 
   if (s.domain) drawDomain(ctx, s.domain, s.time);
+  if (s.cinematic) drawCinematicBackdrop(ctx, images, s.cinematic);
   // Attacker drawn on top so an active limb never disappears behind the opponent.
   const ordered = [...s.fighters].sort((a, b) => (a.move ? 1 : 0) - (b.move ? 1 : 0));
-  ordered.forEach((f) => drawFighter(ctx, images, f, s.time));
+  ordered.forEach((f) => {
+    if (s.cinematic?.kind === "genkidama" && f === s.cinematic.attacker) return;
+    drawFighter(ctx, images, f, s.time);
+  });
+  if (s.cinematic) drawGiftCinematic(ctx, images, s.cinematic, s.time);
   s.fighters.forEach((f) => drawCharge(ctx, f, s.time));
   if (s.domain && s.domain.ballX !== null) drawOrb(ctx, s.domain.attacker.id, s.domain.ballX, GROUND_Y - 140, 44, s.domain.attacker.facing, 1, s.time);
   if (s.domain && s.domain.attacker.pose === "charge") drawOrb(ctx, s.domain.attacker.id, s.domain.attacker.x + 46 * s.domain.attacker.facing, GROUND_Y - 100, 24, s.domain.attacker.facing, 0, s.time);

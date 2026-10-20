@@ -74,3 +74,19 @@ The public `/sprites` directory contains the reference stage, character sprites 
 - Every queued thank-you cutscene is preceded by a short synthesized two-note audio notification (no visual notification), scaled to the batch playback speed.
 - Low-volume synthesized arcade/anime background music loops through Web Audio and follows the existing sound toggle and volume slider.
 - Backend/default config `rules_version: 7`; Universo `animation_ms` is 4800 to reflect its longer cinematic.
+
+## v10 — Invocadores, Genkidama and character voice rotation
+- New configurable gift rules (`rules_version: 9`): 🔨 Martelo (`hammer`, 500) triggers **Invocação do Xande** for 150 damage; 🌠 Galáxia (`galaxy`, 1,000) triggers **Genkidama** for 300 damage. Both remain editable in ADMIN and participate in the strict cutscene → full special → next gift FIFO pipeline.
+- Invocação do Xande (3.8s): the benefiting fighter kneels and slams the floor, Xande emerges, performs four heavy hammer strikes, and finishes with radial cracks, debris, tremor and knockdown. Its five local sprite frames are generated separately and normalized into `/sprites/invocador_hammer_sheet.png`, eliminating duplicate limbs and crop fragments.
+- Genkidama (5.2s): focused charge, converging celestial particles, levitation, expanding cyan sphere, launch, energy-column impact, crater, radial shards and persistent surrounding destruction. Local effects sheet: `/sprites/genkidama_fx_sheet.png`, based on the supplied Genkidama sheet.
+- Uploaded local audio: `/audio/genkidama-charge.mp3` during preparation, `/audio/genkidama-impact.mp3` on impact, `/audio/lula-special-alt.mp3` alternating with the previous Lula special line without immediate repeats, and `/audio/flavio-special.mp3` on every Flávio special. All obey mute, volume and 2× batch playback.
+- Cinematics fully pause the round timer and both AIs, preserve the 9:16 LIVE HUD, use the existing damage/boost rules, and expose `Invocadores` / `Genkidamas` counters in ADMIN.
+- Genkidama uses dedicated three-frame, body-normalized sheets (`lula_genkidama_sheet.png` / `flavio_genkidama_sheet.png`) for gathering, arms-raised and levitating poses; every frame is rendered at the same 250px body height as the standard fighters.
+- The hammer invoker is rendered at fighter scale during attacks, with a pulsing yellow aura. The user-supplied justice-scales image is locally cleaned and composited as the full cinematic backdrop (`hammer_justice_backdrop.png`).
+- Genkidama pose sheets are post-processed against each fighter's original skin palette so Lula and Flávio retain their normal in-game complexion during all three cinematic poses.
+
+## v11 — Cutscene de vitória e colaboradores da rodada
+- Quando uma rodada termina com vencedor, uma cutscene de 6 segundos cobre toda a composição vertical 9:16 (HUD, arena e barras), sem cobrir o cabeçalho/controles externos da página.
+- A sobreposição usa a arte temática e o sprite de vitória do vencedor, informa round/nome e exibe todos os `@usuários` que enviaram presentes naquela rodada, sem duplicar nomes (comparação sem diferenciar maiúsculas/minúsculas) e mantendo a ordem do primeiro envio.
+- A lista de colaboradores é isolada por rodada e zerada em `onRoundStart`; rodada sem presentes mostra “SEM COLABORADORES NESTA RODADA”. Empates não exibem cutscene de vencedor.
+- Testids: `round-credits-cutscene`, `round-credits-winner-name`, `round-credits-users`, `round-credit-user-{n}` e `round-credits-empty`.

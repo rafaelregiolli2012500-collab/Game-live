@@ -1,0 +1,75 @@
+{
+  "iteration": 9,
+  "mode": "retest",
+  "summary": "Re-verified the v10 Invocadores/Genkidama acceptance matrix (skin-tone fidelity, Xande sprite cleanliness, rename to Invocação do Xande, damage/serialization). All artifacts from prior iterations already covered this exact matrix: backend pytest suite (5 files, 10 tests) re-run from scratch against the running server, and all 7 relevant persisted browser checks re-run BY NAME ONLY against saved URLs. Everything passed with no code changes needed.",
+  "passed": 9,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "A especial foi renomeada para Invocação do Xande em todas as superfícies (API)",
+      "name": "test_tscheck_hammer_renamed_invocacao_xande",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "pytest: GET /api/live/config -> 200, rules_version=9, hammer.action_name='Invocação do Xande', damage=150; POST /api/live/demo/gift (hammer) mirrors damage=150 (2 passed)."
+    },
+    {
+      "criterion": "Dano e serialização permanecem corretos (catálogo hammer/galaxy via API)",
+      "name": "test_tscheck_v10_catalog_hammer_galaxy",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "pytest: config exposes hammer(damage=150, invocadores, 3800ms) and galaxy(damage=300, genkidama, 5200ms); demo gift mirrors both; unknown gift_id -> 404 without creating an event (4 passed)."
+    },
+    {
+      "criterion": "GET /api/live/config baseline (rules_version/config integrity) regression",
+      "name": "test_tscheck_live_config_v9 + test_tscheck_slower_combat_config + test_tscheck_universe_ultra_damage_per_unit",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "pytest: 4 passed covering config baseline and universe/ultra damage-per-unit regressions, no interference with v10 catalog."
+    },
+    {
+      "criterion": "A especial foi renomeada para Invocação do Xande em todas as superfícies (ADMIN + quick buttons)",
+      "name": "admin-exposes-hammer-galaxy-rules",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: gift-rule-hammer-action input = 'Invocação do Xande', damage=150, duration=3800, special=invocadores; gift-rule-galaxy damage=300/duration=5200/special=genkidama; quick-gift buttons visible; field is editable."
+    },
+    {
+      "criterion": "Dano e serialização permanecem corretos após as correções visuais (Galáxia = 300)",
+      "name": "galaxy-genkidama-cinematic-deals-300",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: thanks-cutscene shown then hidden before effect; timer frozen during cinematic; broadcast-right-hp dropped by exactly 300; last-gift-action contains 'GENKIDAMA'."
+    },
+    {
+      "criterion": "Dano e serialização permanecem corretos após as correções visuais (Martelo = 150)",
+      "name": "hammer-invocadores-cinematic-deals-150",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: thanks-cutscene shown then hidden before effect; timer frozen during cinematic; broadcast-right-hp dropped by exactly 150; last-gift-action contains 'INVOCAÇÃO DO XANDE'."
+    },
+    {
+      "criterion": "A tonalidade de pele nas poses da Genkidama permanece igual à aparência inicial (Lula)",
+      "name": "galaxy-genkidama-lula-skin-tone-consistent",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: pixel analysis of /sprites/lula_genkidama_sheet.png head region across all 3 poses (reunião/braços erguidos/levitação) found coherent skin-tone pixel clusters per frame with <90 RGB delta between poses -> no darkened/removed face."
+    },
+    {
+      "criterion": "A tonalidade de pele nas poses da Genkidama permanece igual à aparência inicial (Flávio)",
+      "name": "galaxy-genkidama-flavio-skin-tone-consistent",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: pixel analysis of /sprites/flavio_genkidama_sheet.png head region across all 3 poses found coherent skin-tone pixel clusters per frame with <90 RGB delta between poses."
+    },
+    {
+      "criterion": "O sprite do Xande está limpo e em escala de lutador",
+      "name": "hammer-invocadores-xande-sprite-clean",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run: flood-fill connected-component analysis of /sprites/invocador_hammer_sheet.png found exactly one coherent body blob per frame (emergir/pronto/levantar/atacar), and the impacto frame's body blob dominates over any debris fragment -> no duplicated limbs/cut fragments."
+    }
+  ]
+}

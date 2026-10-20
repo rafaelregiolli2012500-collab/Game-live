@@ -19,8 +19,10 @@ DEFAULT_RULES: list[GiftRule] = [
     GiftRule(gift_id="donut", gift_name="Rosquinha", reference_value=30, action_name="Shoryuken", damage=45, animation_ms=1500, effect_intensity=1.4, special_move="shoryuken"),
     GiftRule(gift_id="lion", gift_name="Leão", reference_value=29999, action_name="Expansão de Domínio", damage=120, animation_ms=6500, effect_intensity=2.0, special_move="domain"),
     GiftRule(gift_id="universe", gift_name="Universo TikTok", reference_value=44999, action_name="Ultra Hadouken", damage=240, animation_ms=4800, effect_intensity=3.0, special_move="ultra_hadouken"),
+    GiftRule(gift_id="hammer", gift_name="Martelo", reference_value=500, action_name="Invocação do Xande", damage=150, animation_ms=3800, effect_intensity=2.2, special_move="invocadores"),
+    GiftRule(gift_id="galaxy", gift_name="Galáxia", reference_value=1000, action_name="Genkidama", damage=300, animation_ms=5200, effect_intensity=3.0, special_move="genkidama"),
 ]
-RULES_VERSION = 7
+RULES_VERSION = 9
 
 _clients: dict[str, set[WebSocket]] = {}
 _queues: dict[str, asyncio.Queue[GiftEvent]] = {}

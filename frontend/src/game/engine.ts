@@ -11,6 +11,7 @@ import { createFighter, isAirborne, isFree, setState, startMove, updateMove, upd
 import { adminAdjust } from "./damage";
 import { endDomain, startDomain, updateDomain, type Domain } from "./domain";
 import { burst, createEffects, updateEffects } from "./effects";
+import { endGiftCinematic, startGiftCinematic, updateGiftCinematic, type GiftCinematic, type GiftCinematicKind } from "./giftCinematics";
 import { animateMove, animateState } from "./moves";
 import { render, type RenderState } from "./renderer";
 import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState, GiftAttackKind, HudSnapshot } from "./types";
@@ -18,7 +19,7 @@ import type { CharacterId, CombatStats, EngineCallbacks, Fighter, FighterState, 
 const GRAVITY = 1500;
 const ROUND_BREAK_SEC = 7;
 
-export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, shoryuken: 0, ultra_hadouken: 0, fatalities: 0, domains: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
+export const emptyStats = (): CombatStats => ({ jab: 0, hook: 0, uppercut: 0, kick: 0, sweep: 0, airkick: 0, grab: 0, hadouken: 0, shoryuken: 0, ultra_hadouken: 0, invocadores: 0, genkidama: 0, fatalities: 0, domains: 0, throws: 0, combos: 0, stuns: 0, knockdowns: 0, blocks: 0, dodges: 0, counters: 0 });
 
 /** Force both fighters to face each other (never show their backs). */
 function lockFacing(a: Fighter, b: Fighter) {
@@ -40,8 +41,9 @@ export class ArenaEngine {
   private roundOverAt: number | null = null;
   private banner: RenderState["banner"] = null;
   /** Gift specials waiting for their fighter to be free. */
-  private specials: { id: CharacterId; kind: GiftAttackKind | "domain"; damage: number; username: string; speed: number }[] = [];
+  private specials: { id: CharacterId; kind: GiftAttackKind | GiftCinematicKind | "domain"; damage: number; username: string; speed: number }[] = [];
   private domain: Domain | null = null;
+  private cinematic: GiftCinematic | null = null;
   private activeBatchId: string | null = null;
 
   private settings: CombatSettings;
@@ -56,6 +58,7 @@ export class ArenaEngine {
   private clips = new Set<HTMLAudioElement>();
   private strongSound = 0;
   private punchSound = 0;
+  private lulaVoice = Math.random() < 0.5 ? 0 : 1;
   private musicTimer: number | null = null;
   private musicOscillators: OscillatorNode[] = [];
   private musicGain: GainNode | null = null;
@@ -102,11 +105,18 @@ export class ArenaEngine {
     if (cue === "gift-alert") { this.playGiftAlert(speed); return; }
     if (cue === "ultra-charge") { this.playClip(SOUND_FILES.animePowerup, this.volume * 0.72, 4300, speed, power); return; }
     if (cue === "ultra-wave") { this.playClip(SOUND_FILES.strongEnergyWave, this.volume * 0.9, 3500, speed, power); return; }
+    if (cue === "genkidama-charge") { this.playClip(SOUND_FILES.genkidamaCharge, this.volume * 0.82, 4400, speed, power); return; }
+    if (cue === "genkidama-impact") { this.playClip(SOUND_FILES.genkidamaImpact, this.volume, 2800, speed, power); return; }
     if (cue === "hadouken-start") { this.playClip(SOUND_FILES.surprised, this.volume * 0.72, 1800, speed, power); return; }
     if (cue === "knockdown") { this.playClip(SOUND_FILES.struggleStand, this.volume * 0.62, 1500, speed, power); return; }
     if (cue === "special-start") {
-      if (fighter !== "lula") return;
-      this.playClip(SOUND_FILES.lulaSpecial, this.volume * 0.9, 5200, speed, power);
+      if (fighter === "lula") {
+        const choices = [SOUND_FILES.lulaSpecial, SOUND_FILES.lulaSpecialAlt] as const;
+        this.playClip(choices[this.lulaVoice], this.volume * 0.9, 5200, speed, power);
+        this.lulaVoice = this.lulaVoice === 0 ? 1 : 0;
+      } else if (fighter === "flavio") {
+        this.playClip(SOUND_FILES.flavioSpecial, this.volume * 0.9, 5200, speed, power);
+      }
       return;
     }
     if (cue === "special-impact") {
@@ -270,7 +280,7 @@ export class ArenaEngine {
       this.completeActiveBatch();
       return;
     }
-    if (event.special_move !== "hadouken" && event.special_move !== "shoryuken" && event.special_move !== "ultra_hadouken" && event.special_move !== "domain") { this.completeActiveBatch(); return; }
+    if (event.special_move !== "hadouken" && event.special_move !== "shoryuken" && event.special_move !== "ultra_hadouken" && event.special_move !== "domain" && event.special_move !== "invocadores" && event.special_move !== "genkidama") { this.completeActiveBatch(); return; }
     const kind = event.special_move;
     const units = kind === "domain" ? 1 : event.repeat_policy === "group" ? 1 : Math.min(10, event.quantity);
     const damage = kind === "domain" || event.repeat_policy === "group" ? event.damage * event.quantity : event.damage;
@@ -282,6 +292,8 @@ export class ArenaEngine {
     this.activeBatchId = eventId;
     this.specials = [];
     this.ctxCombat.projectiles = [];
+    if (this.cinematic) endGiftCinematic(this.cinematic, this.ctxCombat);
+    this.cinematic = null;
     if (this.domain) this.domain.victim.frozen = 0;
     this.domain = null;
     this.fighters.forEach((fighter) => { fighter.special = null; fighter.combo = []; fighter.grabPartner = null; setState(fighter, "idle"); });
@@ -291,7 +303,7 @@ export class ArenaEngine {
   }
 
   private processSpecials() {
-    if (this.roundOverAt !== null || this.domain || this.ctxCombat.projectiles.length) return;
+    if (this.roundOverAt !== null || this.domain || this.cinematic || this.ctxCombat.projectiles.length) return;
     for (const f of this.fighters) {
       if (!isFree(f) || f.y < 0) continue;
       if (!f.special) {
@@ -306,6 +318,15 @@ export class ArenaEngine {
           this.domain = startDomain(f, victim, next.damage, next.speed);
           this.ctxCombat.stats.domains += 1;
           this.banner = { text: DOMAINS[f.id].title, sub: DOMAINS[f.id].name, until: this.ctxCombat.time + 1.5 };
+          return;
+        }
+        if (next.kind === "invocadores" || next.kind === "genkidama") {
+          const victim = this.fighters.find((item) => item !== f)!;
+          if (victim.state === "knockdown" || victim.state === "grabbed" || victim.y < 0) continue;
+          this.specials.splice(index, 1);
+          this.cinematic = startGiftCinematic(next.kind, f, victim, next.damage, next.speed);
+          this.ctxCombat.stats[next.kind] += 1;
+          this.banner = { text: next.kind === "genkidama" ? "GENKIDAMA" : "INVOCAÇÃO DO XANDE", sub: `@${next.username} ATIVOU A ESPECIAL`, until: this.ctxCombat.time + 1.35 };
           return;
         }
         this.specials.splice(index, 1);
@@ -324,7 +345,7 @@ export class ArenaEngine {
       // Start the scripted gift move (or re-fire if an attempt was interrupted before release).
       f.combo = [];
       const move = f.special.kind === "shoryuken" ? "shoryuken" : f.special.kind === "hadouken" ? "hadouken" : "ultra_hadouken";
-      if (move === "shoryuken") this.playHit(1.8, f.id, "special-start", f.special.speed);
+      this.playHit(move === "ultra_hadouken" ? 2.2 : 1.8, f.id, "special-start", f.special.speed);
       if (move === "ultra_hadouken") this.playHit(2.2, f.id, "ultra-charge", f.special.speed);
       startMove(f, move, this.ctxCombat, f.special.speed);
       f.invuln = 0.5;
@@ -341,6 +362,7 @@ export class ArenaEngine {
     this.roundOverAt = null;
     this.ctxCombat.projectiles = [];
     this.domain = null;
+    this.cinematic = null;
     resetCamera(this.ctxCombat.camera, 8);
     this.banner = { text: `ROUND ${String(this.round).padStart(2, "0")}`, sub: "LUTEM!", until: this.ctxCombat.time + 1.6 };
     this.callbacks.onRoundStart(this.round);
@@ -425,7 +447,7 @@ export class ArenaEngine {
     const dt = Math.min(0.033, (now - this.last) / 1000);
     this.last = now;
     if (!this.paused) this.step(dt);
-    render(this.ctx, this.images, { domain: this.domain, fighters: this.fighters, camera: this.ctxCombat.camera, fx: this.ctxCombat.fx, projectiles: this.ctxCombat.projectiles, timeLeft: this.timeLeft, round: this.round, time: this.ctxCombat.time, banner: this.banner });
+    render(this.ctx, this.images, { domain: this.domain, cinematic: this.cinematic, fighters: this.fighters, camera: this.ctxCombat.camera, fx: this.ctxCombat.fx, projectiles: this.ctxCombat.projectiles, timeLeft: this.timeLeft, round: this.round, time: this.ctxCombat.time, banner: this.banner });
     if (now - this.hudAt > 100) {
       this.hudAt = now;
       const [a, b] = this.fighters;
@@ -433,7 +455,7 @@ export class ArenaEngine {
       this.callbacks.onHud({
         hp: { [a.id]: a.hp, [b.id]: b.hp } as Record<CharacterId, number>,
         timeLeft: this.timeLeft, round: this.round, stats: { ...this.ctxCombat.stats }, states,
-        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken" || f.move === "shoryuken" || f.move === "ultra_hadouken").length + (this.domain ? 1 : 0),
+        specials: this.specials.length + this.ctxCombat.projectiles.length + this.fighters.filter((f) => f.special || f.move === "hadouken" || f.move === "shoryuken" || f.move === "ultra_hadouken").length + (this.domain ? 1 : 0) + (this.cinematic ? 1 : 0),
         boosts: Object.fromEntries(this.fighters.map((f) => [f.id, { damage: f.dmgBoost.pct, damageLeft: f.dmgBoost.left, defense: f.defBoost.pct, defenseLeft: f.defBoost.left }])) as HudSnapshot["boosts"],
         domain: this.domain ? DOMAINS[this.domain.attacker.id].name : null,
       });
@@ -446,7 +468,18 @@ export class ArenaEngine {
     c.time += dt;
     const [a, b] = this.fighters;
     this.fighters.forEach((f) => this.tickBoosts(f, dt));
-    if (this.domain && this.roundOverAt === null) {
+    if (this.cinematic && this.roundOverAt === null) {
+      const cinematic = this.cinematic;
+      this.fighters.forEach((fighter) => { fighter.flash = Math.max(0, fighter.flash - dt); });
+      if (updateGiftCinematic(cinematic, c, dt)) {
+        this.cinematic = null;
+        endGiftCinematic(cinematic, c);
+      }
+      if (this.fighters.some((fighter) => fighter.hp <= 0) && !this.cinematic) {
+        const knockedOut = this.fighters.find((fighter) => fighter.hp <= 0)!;
+        this.endRound(this.fighters.find((fighter) => fighter !== knockedOut)!);
+      }
+    } else if (this.domain && this.roundOverAt === null) {
       // Cinematic: the domain owns both fighters; round timer, AI and energy balls are paused.
       const d = this.domain;
       this.fighters.forEach((f) => { f.flash = Math.max(0, f.flash - dt); });
@@ -494,7 +527,7 @@ export class ArenaEngine {
   }
 
   private maybeCompleteActiveBatch() {
-    if (!this.activeBatchId || this.specials.length || this.ctxCombat.projectiles.length || this.domain) return;
+    if (!this.activeBatchId || this.specials.length || this.ctxCombat.projectiles.length || this.domain || this.cinematic) return;
     const giftMoveActive = this.fighters.some((fighter) => fighter.move === "hadouken" || fighter.move === "shoryuken" || fighter.move === "ultra_hadouken" || fighter.special);
     if (!giftMoveActive) this.completeActiveBatch();
   }

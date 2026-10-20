@@ -1,126 +1,161 @@
 {
-  "project_name": "Retro Arcade Game Blueprint",
-  "theme": "Vibrant Electric Cyber-Arcade (Dark Mode Core)",
-  "emotional_archetype": "Electric & Neon - Tactical Arcade Immersion",
-  "design_philosophy": {
-    "vision": "Transform the skeleton into an energetic, polished, responsive, end-to-end local arcade game with zero mandatory login, immediate playable gratification, persistence, local rankings, combo mechanics, and tactile feedback.",
-    "core_principles": [
-      "Immediate Playability: Zero friction, instant start screen into action with single tap/key press.",
-      "Vibrant Arcade Aesthetics: High-contrast dark void background with glowing neon cyan, hot magenta, electric yellow, and CRT scanline CRT overlays.",
-      "Juicy Feedback & Polish: Screen shake, particle explosions, dynamic combo multipliers, floating point indicators, audio visualizers, and state transitions.",
-      "Persistence & Progression: Browser localStorage sync + backend leaderboard persistence, unlocking skins, tracking personal high scores, and achievement badges."
-    ]
-  },
-  "typography": {
-    "heading_font": "Space Grotesk, sans-serif or Orbitron, display-sans",
-    "body_font": "Geist Variable, sans-serif",
-    "mono_font": "Geist Mono Variable, monospace",
-    "hierarchy": {
-      "h1_title": "text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight drop-shadow-[0_0_15px_rgba(255,0,110,0.6)]",
-      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-cyan-400 drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]",
-      "h3_card": "text-xl sm:text-2xl font-semibold tracking-normal text-white",
-      "body": "text-base font-medium leading-relaxed text-slate-300",
-      "hud_stats": "font-mono text-lg sm:text-2xl font-bold text-yellow-400 tracking-wider",
-      "labels": "text-xs uppercase tracking-[0.2em] text-slate-400 font-bold"
-    }
+  "theme": "dark",
+  "project_context": "TikTok LIVE interactive battle arena (9:16 vertical broadcast format) featuring animated fighters (Lula vs Flávio) with serialized gift processing pipeline, audio triggers, and dynamic canvas-rendered special cinematic moves (Invocadores & Genkidama).",
+  "entry_surfaces": {
+    "/": "split live arena — left/center 9:16 interactive vertical arena canvas and fighter stage, right quick gift trigger panel, admin configuration modal, combat log and real-time audio controls"
   },
   "colors": {
-    "mode": "dark",
-    "base": {
-      "void_background": "#090A10",
-      "card_surface": "#121420",
-      "card_surface_hover": "#1A1D2E",
-      "overlay_backdrop": "rgba(9, 10, 16, 0.85)",
-      "border_default": "rgba(255, 255, 255, 0.12)"
-    },
-    "accents": {
-      "neon_pink": "#FF006E",
-      "neon_cyan": "#00F0FF",
-      "neon_yellow": "#FFE600",
-      "neon_green": "#39FF14",
-      "neon_purple": "#B5179E",
-      "arcade_red": "#FF3B30"
-    },
-    "gradients": {
-      "primary_btn": "bg-gradient-to-r from-[#FF006E] to-[#B5179E] hover:from-[#FF2A85] hover:to-[#D81BAB]",
-      "cyan_btn": "bg-gradient-to-r from-[#00F0FF] to-[#00A8FF] text-black font-extrabold hover:brightness-110",
-      "gold_badge": "bg-gradient-to-r from-[#FFE600] to-[#FF9900] text-black",
-      "card_border": "border-t border-l border-white/20 border-b-2 border-r-2 border-black/80"
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#0B0E14",
+        "on_bg": "#F3F4F6",
+        "on_bg_muted": "#9CA3AF",
+        "roles": {
+          "link": "#60A5FA",
+          "error": "#F87171",
+          "success": "#34D399",
+          "warning": "#FBBF24"
+        }
+      },
+      {
+        "name": "arena_container",
+        "kind": "solid",
+        "bg": "#111827",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "accent_lula": "#EF4444",
+          "accent_flavio": "#3B82F6",
+          "energy_glow": "#38BDF8",
+          "destruction_amber": "#F97316"
+        }
+      },
+      {
+        "name": "panel",
+        "kind": "solid",
+        "bg": "#182234",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "border": "#2D3D58",
+          "badge_highlight": "#E0E7FF"
+        }
+      },
+      {
+        "name": "glass_overlay",
+        "kind": "glass",
+        "contrast_against": "#080B10",
+        "guarantee": "backdrop-blur-xl bg-black/60 border border-white/10",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#CBD5E1",
+        "roles": {
+          "gold_text": "#FDE047",
+          "impact_red": "#FF4D4D"
+        }
+      }
+    ],
+    "accent": "#F59E0B",
+    "on_accent": "#000000"
+  },
+  "typography": {
+    "font_family_heading": "Outfit, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, sans-serif",
+    "font_family_mono": "IBM Plex Mono, monospace",
+    "scale_px": {
+      "display": 56,
+      "h1": 40,
+      "h2": 28,
+      "h3": 20,
+      "body": 16,
+      "caption": 14
     }
   },
-  "visual_enhancers": {
-    "scanlines": "Absolute inset overlay with repeating linear gradient creating nostalgic CRT screen raster lines",
-    "neon_glows": "shadow-[0_0_20px_rgba(0,240,255,0.35)] or drop-shadow-[0_0_12px_rgba(255,0,110,0.5)]",
-    "arcade_frame": "Heavy double border with rounded-2xl, inner shadow, and retro score header display",
-    "glassmorphism": "backdrop-blur-xl bg-black/60 border border-white/10"
+  "motion": {
+    "specials": {
+      "invocadores": {
+        "steps": [
+          "fighter_kneel_and_slam_ground",
+          "earth_crack_and_shockwave",
+          "summon_robed_hammer_character",
+          "heavy_multi_hit_hammer_combo",
+          "ground_tremor_and_flying_rocks",
+          "target_knockback_and_damage_pop"
+        ],
+        "duration_ms": 3800,
+        "default_damage": 150,
+        "gift_trigger": "Martelo"
+      },
+      "genkidama": {
+        "steps": [
+          "fighter_arms_raised_gathering_energy",
+          "floating_celestial_light_particles_converging",
+          "fighter_levitates_off_ground",
+          "massive_expanding_cyan_electric_sphere",
+          "dramatic_slow_down_and_launch",
+          "colossal_screen_shake_and_shockwave_ring",
+          "ground_crater_radial_shards_and_destruction_effects"
+        ],
+        "duration_ms": 5200,
+        "default_damage": 300,
+        "gift_trigger": "Galáxia"
+      }
+    },
+    "transitions": "transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease",
+    "reduced_motion": "Disable screen shakes, replace particle explosion with instant animated radial ring fade"
   },
-  "layout_strategies": {
-    "header_nav": "Fixed top bar z-50 backdrop-blur-md bg-[#090A10]/90 border-b border-white/10 text-white px-4 py-3 flex items-center justify-between",
-    "main_container": "max-w-7xl mx-auto px-4 py-6 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]",
-    "arcade_cabinet_wrapper": "relative w-full max-w-4xl bg-[#121420] rounded-3xl p-4 sm:p-8 border-4 border-[#00F0FF]/30 shadow-[0_0_50px_rgba(0,240,255,0.15)] overflow-hidden",
-    "game_canvas_area": "relative w-full aspect-video sm:aspect-[16/9] min-h-[380px] max-h-[620px] bg-[#05060A] rounded-2xl overflow-hidden border-2 border-cyan-500/30 flex items-center justify-center"
+  "audio_specifications": {
+    "genkidama_charging": {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/ebded14c788fc408_Dragon%20Ball%20Z%20-%20Genkidama%20Sound%20Efect%28MP3_160K%29.mp3",
+      "description": "Dragon Ball Z Genkidama sound effect played during the charge/levitation phase"
+    },
+    "genkidama_explosion": {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/70edb5cf8e70b716_SOM%20DE%20EXPLOS%C3%83O%28MP3_160K%29.mp3",
+      "description": "Som de explosão impact audio triggered right when the Genkidama hits the target and shatters the ground"
+    },
+    "lula_special_voice_a": {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/697c55f78db24b41_km_20261020-1_720p_30f_20261020_164716%20%28online-audio-converter.com%29.mp3",
+      "description": "Lula special voice line option A - alternates randomly without immediate repetition with voice line option B"
+    },
+    "flavio_special_voice": {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/92a72fb2d0c8f37e_km_20261020_720p_30f_20261020_162826%20%28online-audio-converter.com%29.mp3",
+      "description": "Flávio special voice line used on all Flávio special moves"
+    }
   },
-  "component_structure": {
-    "navigation": "HeaderNav with Volume Toggle, Theme Skin Selector, High Score Badge, Local Leaderboard Modal Trigger, Reset Progress Trigger",
-    "screens": [
-      "AttractScreen / Start Screen (Title, High Score, Select Difficulty, Select Skin, Press Start / Tap to Play CTA)",
-      "GameplayScreen (HUD canvas/grid, Combo counter, Score multiplier, Power-ups, Lives/Timer, Virtual Touch D-Pad / Controls for Mobile)",
-      "PauseOverlay (Resume, Restart, Audio toggles, Keybindings guide)",
-      "GameOverScreen (Final Score, New Record indicator, Combo breakdown, Restart Button, Save Name to Local Leaderboard)",
-      "VictoryScreen (Clear Time, Accuracy bonus, Celebratory confetti particle explosion, Next Level/Infinite Mode)"
-    ],
-    "widgets": [
-      "LocalLeaderboardModal (Tabs: All-time, Today, Difficulty levels, Clear Scores button)",
-      "AchievementsDrawer (Unlocked badges, combo streaks, games played)",
-      "AudioVisualizer (Toggle SFX / Arcade synth BGM simulation with volume slider)",
-      "ControlsGuide (Keyboard arrows/WASD/Space + Mobile Touch Joystick diagram)"
-    ]
+  "visual_references": [
+    {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/708e3460cd39e09d_IMG_20261020_160845.jpg",
+      "role": "Reference for hammer summon posture, ground slam destruction, and robed hammer warrior sprite"
+    },
+    {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/e205e9f3cc868e1c_IMG-20261020-WA3889.webp",
+      "role": "Reference for fighter levitation, energy gathering particles, and Genkidama orb glow effect"
+    },
+    {
+      "url": "https://customer-assets-v7afamib.emergentagent.net/job_play-live-5/artifacts/04bfe4163915c924_file_000000004db0820ebec4cd219eb8b32f.png",
+      "role": "Reference for arena destructive impact, crater debris, radial shockwave rings, and combat visual effects"
+    }
+  ],
+  "accessibility": {
+    "wcag_compliance": "AA",
+    "data_testids": "All buttons, gift senders, audio toggles, character selectors, and admin inputs must provide strict role-based data-testid attributes (e.g., data-testid='trigger-gift-martelo-btn', data-testid='trigger-gift-galaxia-btn', data-testid='admin-settings-dialog-trigger')",
+    "sound_controls": "Global volume control, Mute toggle, and visual subtitle/toast notifications when audio lines fire"
   },
-  "image_urls": {
-    "arcade_background": "https://images.unsplash.com/photo-1757444838044-d9dcb1bb3017?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHw0fHxhcmNhZGUlMjByZXRybyUyMG5lb24lMjBuZW9uJTIwZ2FtZSUyMG5lb24lMjBsaWdodHMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc5MjM3MTM4MHww&ixlib=rb-4.1.0&q=85",
-    "arcade_machines_lit": "https://images.unsplash.com/photo-1558324190-c940eb141401?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwyfHxhcmNhZGUlMjByZXRybyUyMG5lb24lMjBuZW9uJTIwZ2FtZSUyMG5lb24lMjBsaWdodHMlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc5MjM3MTM4MHww&ixlib=rb-4.1.0&q=85",
-    "ski_ball_arcade": "https://images.pexels.com/photos/1293260/pexels-photo-1293260.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
-  },
-  "data_testid_guidelines": {
-    "mandatory_elements": [
-      "data-testid=\"start-game-button\"",
-      "data-testid=\"restart-game-button\"",
-      "data-testid=\"pause-game-button\"",
-      "data-testid=\"resume-game-button\"",
-      "data-testid=\"current-score-display\"",
-      "data-testid=\"high-score-display\"",
-      "data-testid=\"combo-counter-display\"",
-      "data-testid=\"lives-counter-display\"",
-      "data-testid=\"leaderboard-modal-open-button\"",
-      "data-testid=\"leaderboard-entry-input\"",
-      "data-testid=\"save-score-button\"",
-      "data-testid=\"sound-toggle-button\"",
-      "data-testid=\"difficulty-select\"",
-      "data-testid=\"skin-select\"",
-      "data-testid=\"game-over-modal\"",
-      "data-testid=\"victory-modal\"",
-      "data-testid=\"mobile-dpad-up\"",
-      "data-testid=\"mobile-dpad-down\"",
-      "data-testid=\"mobile-dpad-left\"",
-      "data-testid=\"mobile-dpad-right\"",
-      "data-testid=\"mobile-action-button\""
-    ]
+  "component_path": {
+    "arena_canvas": "frontend/src/components/game/ArenaCanvas.tsx",
+    "special_cinematics": "frontend/src/components/game/SpecialCinematics.tsx",
+    "gift_trigger_bar": "frontend/src/components/game/GiftTriggerBar.tsx",
+    "audio_controller": "frontend/src/components/game/AudioController.ts",
+    "admin_config_dialog": "frontend/src/components/game/AdminConfigDialog.tsx",
+    "combat_status_hud": "frontend/src/components/game/CombatStatusHud.tsx"
   },
   "instructions_to_main_agent": [
-    "Build a complete, standalone, end-to-end playable arcade game inside src/pages/Home.tsx (or subcomponents in src/components/game/).",
-    "Preserve zero-login local functionality using localStorage for high scores, game history, unlocked themes, and stats, with smooth REST API synchronization to backend/server.py (/api/scores, /api/leaderboard, /api/status).",
-    "Include responsive desktop keyboard controls (WASD/Arrows + Space) and mobile-friendly touch d-pad/action buttons so it is 100% playable on all devices.",
-    "Add audio effects using Web Audio API synthesis (synth beeps, coin sounds, explosion sounds) with mute/volume controls so no external audio files are required.",
-    "Provide crisp victory, game over, pause overlays, level difficulty controls, skin customization, local leaderboard, and combo multipliers.",
-    "Ensure every single interactive element has explicit data-testid attributes matching data_testid_guidelines."
-  ],
-  "UNIVERSAL GUIDELINES FOR MAIN AGENT": {
-    "anti_patterns": [
-      "Do NOT leave placeholder text or incomplete screens.",
-      "Do NOT require external user authentication to start or save high scores.",
-      "Do NOT use transparent dropdown backgrounds without heavy backdrop blurs.",
-      "Do NOT default to standard centered white layout; maintain the high-contrast neon arcade vibe."
-    ],
-    "testing_compliance": "Ensure all buttons, inputs, modals, and score text fields feature stable data-testid attributes for automated testing."
-  }
+    "1. Preserve the 9:16 vertical TikTok LIVE broadcast container as the central focus while providing live stream controls, gift simulation panels, and real-time combat telemetry.",
+    "2. Implement the full canvas and particle animation for Invocadores: ground slam, summoning the robed hammer warrior, multi-hit strike combo, flying rocks, and tremor.",
+    "3. Implement the full canvas and particle animation for Genkidama: levitation, celestial light gathering, massive glowing energy sphere, dramatic launch, destructive impact, crater fissures, and debris.",
+    "4. Connect audio assets accurately: Play Genkidama charge sound during buildup and explosion sound upon impact. For Lula, alternate between voice lines without consecutive duplicates. For Flávio, trigger the dedicated voice line on all specials.",
+    "5. Register configurable gifts: Martelo triggers Invocadores (150 damage) and Galáxia triggers Genkidama (300 damage), with full admin customization capabilities.",
+    "6. Maintain strict serialized FIFO gift pipeline so specials and incoming gifts queue and execute cleanly without collision or state corruption."
+  ]
 }

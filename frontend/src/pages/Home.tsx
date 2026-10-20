@@ -5,6 +5,7 @@ import { toast, Toaster } from "sonner";
 
 import { GiftCaptions } from "@/components/live/GiftCaptions";
 import { LiveAdminPanel } from "@/components/live/LiveAdminPanel";
+import { RoundCreditsCutscene } from "@/components/live/RoundCreditsCutscene";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CANVAS_H, CANVAS_W, CHARACTERS, portraitPath } from "@/game/assets";
@@ -16,6 +17,7 @@ import type { DemoGiftCreate, GiftEvent, LiveConfig, LiveStatus } from "@/lib/li
 
 type Screen = "menu" | "arena";
 type UltraScore = Record<CharacterId, number>;
+interface RoundCredits { winner: CharacterId; round: number; contributors: string[] }
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 const ULTRA_GOAL = 20;
@@ -57,6 +59,7 @@ export default function Home() {
   const [captions, setCaptions] = useState<GiftEvent[]>([]);
   const [captionSpeed, setCaptionSpeed] = useState(1);
   const [roundResult, setRoundResult] = useState<string | null>(null);
+  const [roundCredits, setRoundCredits] = useState<RoundCredits | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<ArenaEngine | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
@@ -66,6 +69,7 @@ export default function Home() {
   const ultraScoreRef = useRef<UltraScore>(ultraScore);
   const fatalityLockRef = useRef(false);
   const fatalityEventsRef = useRef<Set<string>>(new Set());
+  const roundContributorsRef = useRef<string[]>([]);
   const queryClient = useQueryClient();
   const right: CharacterId = left === "lula" ? "flavio" : "lula";
   const { events: socketEvents, status: socketStatus } = useGiftSocket("main-arena");
@@ -89,6 +93,12 @@ export default function Home() {
   useEffect(() => { if (configQuery.data) setLiveConfig(configQuery.data); }, [configQuery.data]);
   useEffect(() => { engineRef.current?.setSettings(liveConfig.combat); }, [liveConfig.combat]);
 
+  const addRoundContributor = useCallback((username: string) => {
+    const clean = username.trim();
+    if (!clean || roundContributorsRef.current.some((item) => item.toLocaleLowerCase() === clean.toLocaleLowerCase())) return;
+    roundContributorsRef.current = [...roundContributorsRef.current, clean];
+  }, []);
+
   /** Single entry point for every validated gift (socket or demo), deduped by event_id. */
   const receiveGift = useCallback((event: GiftEvent) => {
     if (seenRef.current.has(event.event_id)) return;
@@ -100,6 +110,7 @@ export default function Home() {
     giftQueueRef.current.push(event);
     beginNextGift();
     setLastGift(event);
+    addRoundContributor(event.username);
     setRecent((current) => [event, ...current.filter((item) => item.event_id !== event.event_id)].slice(0, 5));
     setGiftsThisFight((count) => count + event.quantity);
     if (!fatalityLockRef.current) {
@@ -115,7 +126,7 @@ export default function Home() {
         setFatalityWinner(id);
       }
     }
-  }, [beginNextGift]);
+  }, [addRoundContributor, beginNextGift]);
 
   useEffect(() => { [...socketEvents].reverse().forEach(receiveGift); }, [socketEvents, receiveGift]);
 
@@ -137,12 +148,15 @@ export default function Home() {
       onHud: setHud,
       onRoundStart: () => {
         setRoundResult(null);
+        setRoundCredits(null);
+        roundContributorsRef.current = [];
         setGiftsThisFight(0);
         if (fatalityLockRef.current && ultraScoreRef.current.lula === 0 && ultraScoreRef.current.flavio === 0) fatalityLockRef.current = false;
         if (!fatalityLockRef.current) setFatalityWinner(null);
       },
-      onRoundEnd: (winner) => {
+      onRoundEnd: (winner, endedRound) => {
         setRoundResult(winner ? `${CHARACTERS[winner].name} VENCEU A RODADA` : "EMPATE");
+        if (winner) setRoundCredits({ winner, round: endedRound, contributors: [...roundContributorsRef.current] });
         if (winner) setWins((current) => { const next = { ...current, [winner]: current[winner] + 1 }; localStorage.setItem("planalto-wins", JSON.stringify(next)); return next; });
       },
       onFatalityComplete: () => {
@@ -166,6 +180,11 @@ export default function Home() {
 
   useEffect(() => { engineRef.current?.setPaused(paused || captions.length > 0); }, [paused, captions.length, screen]);
   useEffect(() => { engineRef.current?.setVolume(soundOn ? volume : 0); }, [soundOn, volume, screen]);
+  useEffect(() => {
+    if (!roundCredits) return undefined;
+    const timer = window.setTimeout(() => setRoundCredits(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [roundCredits]);
 
   const status: LiveStatus = statusQuery.data ?? socketStatus;
   const connection = connectionLabel(socketStatus.state === "connected" ? socketStatus : status, liveConfig);
@@ -215,7 +234,7 @@ export default function Home() {
           <h1 data-testid="game-title">BRASIL<br /><span>FIGHT ARENA</span></h1>
           <div className="live-mode-card arcade-panel" data-testid="tiktok-live-mode-card">
             <div className="live-mode-head"><span className="live-dot-icon"><Radio size={22} /></span><div><b data-testid="tiktok-live-mode-label">TIKTOK LIVE</b><small data-testid="tiktok-live-mode-status">{connection.text}</small></div></div>
-            <p data-testid="tiktok-live-mode-subtitle">Rosa = +dano, Coração = +defesa, Rosquinha = Shoryuken, Leão = Domínio e Universo = Ultra Hadouken. O primeiro time com 20 presentes ativa o Fatality!</p>
+            <p data-testid="tiktok-live-mode-subtitle">Rosa = +dano, Coração = +defesa, Rosquinha = Shoryuken, Leão = Domínio, Universo = Ultra, Martelo = Invocação do Xande e Galáxia = Genkidama. O primeiro time com 20 presentes ativa o Fatality!</p>
             <Button type="button" className="start-button live-enter-button" data-testid="enter-live-arena-button" onClick={enterArena}><span>ENTRAR NA ARENA LIVE</span><ChevronRight size={22} /></Button>
             {liveConfig.integration_mode === "demo" || connection.tone !== "ok"
               ? <small className="live-mode-note" data-testid="demo-mode-note">Sem conexão real com o TikTok: a arena abre em modo demonstração e os presentes são simulados pelo painel ADMIN.</small>
@@ -269,7 +288,7 @@ export default function Home() {
               <div className="gift-callout">
                 <span data-testid="last-gift-label"><b className="gift-callout-icon" data-testid="last-gift-icon">{lastGift ? giftIcon(lastGift.gift_id) : "🎁"}</b>{lastGift ? `${lastGift.gift_name.toUpperCase()}${lastGift.quantity > 1 ? ` x${lastGift.quantity}` : ""}` : "AGUARDANDO PRESENTES"}{lastGift?.source === "demo" && <i className="demo-chip" data-testid="last-gift-simulated-chip">SIMULADO</i>}</span>
                 <small data-testid="last-gift-user">{lastGift ? `ENVIADO POR: @${lastGift.username}` : "NENHUM PRESENTE NESTA LUTA"}</small>
-                <strong data-testid="last-gift-action">{lastGift ? giftEffectLabel(lastGift) : "🌹 DANO · 💗 DEFESA · 🍩 SHORYUKEN · 🦁 DOMÍNIO · 🌌 ULTRA"}</strong>
+                <strong data-testid="last-gift-action">{lastGift ? giftEffectLabel(lastGift) : "🌹 DANO · 💗 DEFESA · 🍩 SHORYUKEN · 🦁 DOMÍNIO · 🌌 ULTRA · 🔨 XANDE · 🌠 GENKIDAMA"}</strong>
                 <em data-testid="last-gift-note">{lastGift ? `OBRIGADO, @${lastGift.username}!` : "ENVIE PRESENTES E MUDE A LUTA"}</em>
               </div>
               <div className="broadcast-stats">
@@ -279,6 +298,7 @@ export default function Home() {
                 <span data-testid="gift-goal-display">META DA LUTA <b>{goalPct}%</b></span>
               </div>
             </div>
+            {roundCredits && <RoundCreditsCutscene winner={roundCredits.winner} round={roundCredits.round} contributors={roundCredits.contributors} />}
           </div>
           <div className="arena-toolbar">
             <button type="button" className="toolbar-button" data-testid="exit-to-menu-button" onClick={() => setScreen("menu")}><HomeIcon size={15} /> MENU</button>

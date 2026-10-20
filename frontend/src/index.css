@@ -1,6 +1,9 @@
 @import "@fontsource-variable/space-grotesk";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/outfit";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource/ibm-plex-mono";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -8,9 +11,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: "Space Grotesk", sans-serif;
-  --font-sans: "Geist Variable", sans-serif;
-  --font-mono: "Geist Mono Variable", monospace;
+  --font-heading: "Outfit Variable", "Space Grotesk", sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", "Geist Variable", sans-serif;
+  --font-mono: "IBM Plex Mono", "Geist Mono Variable", monospace;
   --color-background: #090a10;
   --color-foreground: #f8fafc;
   --color-border: rgba(255, 255, 255, .12);
@@ -157,6 +160,12 @@
 @keyframes thanks-bar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes thanks-glow { 50% { text-shadow: 0 0 18px var(--accent), 3px 3px 0 #05060a; } }
 @keyframes fatality-blink { 0%, 100% { opacity: 1; filter: brightness(1); } 45% { opacity: .42; filter: brightness(1.8); } }
+@keyframes credits-reveal { from { opacity: 0; clip-path: inset(0 0 100% 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
+@keyframes credits-art-drift { from { transform: scale(1.16) translateX(-3%); } to { transform: scale(1.04) translateX(0); } }
+@keyframes credits-winner-rise { from { opacity: 0; transform: translateY(46px) scale(.82); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes credits-copy-in { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes credits-user-in { from { opacity: 0; transform: translateY(12px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes credits-rays { to { transform: translate(-50%, -50%) rotate(360deg); } }
 .thanks-cutscene { position: absolute; inset: 0; z-index: 6; overflow: hidden; background: #05060a; animation: thanks-in .42s cubic-bezier(.2,.9,.3,1) both; pointer-events: none; }
 .thanks-cutscene.is-leaving { animation: thanks-out .38s ease forwards; }
 .thanks-cutscene.is-fast { animation-duration: .21s; }
@@ -181,6 +190,26 @@
 .thanks-effect { padding: 3px 8px; border: 1px solid var(--accent); border-radius: 4px; color: #ffe600; background: rgba(5,6,10,.7); font: 900 clamp(7px, 1.9vw, 13px) "Space Grotesk", sans-serif; font-style: normal; letter-spacing: .08em; }
 .thanks-paused { position: absolute; bottom: 11%; left: 50%; padding: 3px 8px; border: 1px solid rgba(255,255,255,.35); border-radius: 3px; color: #fff; background: rgba(5,6,10,.76); font: 900 7px "Geist Mono Variable", monospace; letter-spacing: .18em; transform: translateX(-50%); }
 .thanks-backlog { position: absolute; top: 11%; right: 3%; color: #fff; font: 800 9px "Geist Mono Variable", monospace; }
+/* ---------- Full-stream winner + contributor credits ---------- */
+.stream-composition > .round-credits-cutscene { position: absolute; inset: 0; z-index: 24; overflow: hidden; color: #fff; background: #05060a; animation: credits-reveal .55s cubic-bezier(.16,1,.3,1) both; }
+.round-credits-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 36% center; image-rendering: pixelated; opacity: .44; animation: credits-art-drift 6s ease-out both; }
+.round-credits-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(3,4,10,.28), rgba(3,4,10,.68) 45%, rgba(3,4,10,.96)), linear-gradient(90deg, color-mix(in srgb, var(--winner-accent) 28%, transparent), transparent 58%); }
+.round-credits-rays { position: absolute; top: 43%; left: 50%; width: 620px; height: 620px; opacity: .22; background: repeating-conic-gradient(from 0deg, var(--winner-accent) 0deg 5deg, transparent 5deg 15deg); transform: translate(-50%, -50%); animation: credits-rays 24s linear infinite; mask-image: radial-gradient(circle, #000, transparent 68%); }
+.round-credits-header { position: absolute; top: 3.8%; right: 5%; left: 5%; display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.22); font: 900 8px "IBM Plex Mono", monospace; letter-spacing: .14em; }
+.round-credits-header span { color: #cbd5e1; }
+.round-credits-header strong { display: inline-flex; align-items: center; gap: 5px; color: #fde047; }
+.round-credits-winner { position: absolute; top: 12%; left: 50%; width: 66%; height: 42%; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 20px 18px rgba(0,0,0,.75)) drop-shadow(0 0 22px color-mix(in srgb, var(--winner-accent) 64%, transparent)); transform: translateX(-50%); animation: credits-winner-rise .72s .18s cubic-bezier(.16,1,.3,1) both; }
+.round-credits-copy { position: absolute; right: 6%; bottom: 10%; left: 6%; display: flex; flex-direction: column; align-items: center; text-align: center; animation: credits-copy-in .55s .42s ease both; }
+.round-credits-kicker { color: #fde047; font: 900 7px "IBM Plex Mono", monospace; letter-spacing: .2em; }
+.round-credits-copy h2 { margin: 5px 0 7px; color: #fff; font: 900 clamp(22px, 6vw, 36px)/.9 "Outfit Variable", sans-serif; letter-spacing: -.03em; text-shadow: 3px 3px 0 #05060a, 0 0 24px var(--winner-accent); }
+.round-credits-divider { width: 62%; height: 2px; margin: 3px 0 9px; background: linear-gradient(90deg, transparent, var(--winner-accent), #fde047, transparent); }
+.round-credits-copy p { display: flex; align-items: center; gap: 5px; margin: 0 0 7px; color: #cbd5e1; font: 900 7px "IBM Plex Mono", monospace; letter-spacing: .14em; }
+.round-credits-copy p svg { color: #fde047; }
+.round-credits-users { display: flex; max-height: 68px; flex-wrap: wrap; justify-content: center; gap: 5px; overflow: hidden; }
+.round-credits-users span, .round-credits-empty { padding: 4px 7px; border: 1px solid color-mix(in srgb, var(--winner-accent) 65%, white 12%); border-radius: 999px; color: #fff; background: rgba(5,6,10,.68); box-shadow: 0 0 10px color-mix(in srgb, var(--winner-accent) 28%, transparent); font: 800 8px "Plus Jakarta Sans Variable", sans-serif; animation: credits-user-in .35s ease both; }
+.round-credits-users span:nth-child(2n) { animation-delay: .08s; }.round-credits-users span:nth-child(3n) { animation-delay: .14s; }
+.round-credits-empty { color: #94a3b8; border-color: rgba(255,255,255,.18); }
+.round-credits-footer { position: absolute; right: 0; bottom: 0; left: 0; padding: 8px; color: #05060a; background: linear-gradient(90deg, var(--winner-accent), #fde047); font: 900 7px "IBM Plex Mono", monospace; text-align: center; letter-spacing: .13em; }
 /* ---------- Boost chips under each profile ---------- */
 .boost-chips { display: flex; flex-wrap: wrap; gap: 3px; min-height: 0; margin-top: 3px; }
 .broadcast-player-right .boost-chips { justify-content: flex-end; }

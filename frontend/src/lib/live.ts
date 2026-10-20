@@ -8,7 +8,7 @@ export type CombatMode = "live" | "normal";
 export type TargetCharacter = "opponent" | CharacterId;
 export type RepeatPolicy = "individual" | "group";
 /** Special moves a gift can trigger (from the reference movement sheets). */
-export type SpecialMove = "none" | "hadouken" | "shoryuken" | "ultra_hadouken" | "domain" | "damage_boost" | "defense_boost";
+export type SpecialMove = "none" | "hadouken" | "shoryuken" | "ultra_hadouken" | "domain" | "invocadores" | "genkidama" | "damage_boost" | "defense_boost";
 
 export interface GiftRule {
   gift_id: string;
@@ -116,7 +116,7 @@ export const fetchLiveQueue = () => apiGet<GiftEvent[]>("/live/queue");
 export const DEFAULT_LIVE_CONFIG: LiveConfig = {
   id: "default",
   integration_mode: "demo",
-  rules_version: 7,
+  rules_version: 9,
   combat: {
     max_hp: 600,
     common_damage: 5,
@@ -146,10 +146,12 @@ export const DEFAULT_LIVE_CONFIG: LiveConfig = {
     { gift_id: "donut", gift_name: "Rosquinha", reference_value: 30, action_name: "Shoryuken", damage: 45, animation_ms: 1500, effect_intensity: 1.4, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "shoryuken" },
     { gift_id: "lion", gift_name: "Leão", reference_value: 29999, action_name: "Expansão de Domínio", damage: 120, animation_ms: 6500, effect_intensity: 2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "domain" },
     { gift_id: "universe", gift_name: "Universo TikTok", reference_value: 44999, action_name: "Ultra Hadouken", damage: 240, animation_ms: 4800, effect_intensity: 3, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "ultra_hadouken" },
+    { gift_id: "hammer", gift_name: "Martelo", reference_value: 500, action_name: "Invocação do Xande", damage: 150, animation_ms: 3800, effect_intensity: 2.2, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "invocadores" },
+    { gift_id: "galaxy", gift_name: "Galáxia", reference_value: 1000, action_name: "Genkidama", damage: 300, animation_ms: 5200, effect_intensity: 3, target_character: "opponent", enabled: true, repeat_policy: "individual", special_move: "genkidama" },
   ],
 };
 
-export const GIFT_ICONS: Record<string, string> = { rose: "🌹", heart: "💗", donut: "🍩", lion: "🦁", universe: "🌌" };
+export const GIFT_ICONS: Record<string, string> = { rose: "🌹", heart: "💗", donut: "🍩", lion: "🦁", universe: "🌌", hammer: "🔨", galaxy: "🌠" };
 export const SPECIAL_MOVES: { id: SpecialMove; label: string }[] = [
   { id: "none", label: "Nenhum" },
   { id: "damage_boost", label: "Dano +10%" },
@@ -158,6 +160,8 @@ export const SPECIAL_MOVES: { id: SpecialMove; label: string }[] = [
   { id: "shoryuken", label: "Shoryuken" },
   { id: "ultra_hadouken", label: "Ultra Hadouken" },
   { id: "domain", label: "Expansão de Domínio" },
+  { id: "invocadores", label: "Invocação do Xande" },
+  { id: "genkidama", label: "Genkidama" },
 ];
 
 /** Boost rules: each gift unit adds 10%, capped so the fight stays long; lasts 2 minutes (resets every round). */
@@ -176,6 +180,8 @@ export function giftEffectLabel(event: GiftEvent): string {
     case "shoryuken": return q > 1 ? `SHORYUKEN x${Math.min(10, q)}` : "SHORYUKEN";
     case "ultra_hadouken": return q > 1 ? `ULTRA HADOUKEN x${Math.min(10, q)}` : "ULTRA HADOUKEN";
     case "domain": return "EXPANSÃO DE DOMÍNIO";
+    case "invocadores": return q > 1 ? `INVOCAÇÃO DO XANDE x${Math.min(10, q)}` : "INVOCAÇÃO DO XANDE";
+    case "genkidama": return q > 1 ? `GENKIDAMA x${Math.min(10, q)}` : "GENKIDAMA";
     default: return event.action_name.toUpperCase();
   }
 }

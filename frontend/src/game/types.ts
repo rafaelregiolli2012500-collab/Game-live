@@ -82,6 +82,8 @@ export interface CombatStats {
   hadouken: number;
   shoryuken: number;
   ultra_hadouken: number;
+  invocadores: number;
+  genkidama: number;
   fatalities: number;
   domains: number;
   throws: number;
